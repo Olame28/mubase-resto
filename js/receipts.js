@@ -274,12 +274,19 @@
   };
 
   // Ticket texte avec bordure encadrée (compatible toutes imprimantes).
-  var TICKET_W = 38; // largeur utile entre les bordures
+  // Contenu utile = 36 car. + 1 marge de chaque cote = 38 + 2 bordures = 40.
+  var TICKET_W = 36;
   var TICKET_SEP = '========================================';
   var TICKET_DASH = '----------------------------------------';
 
+  function tPadEnd(t, w) {
+    t = String(t);
+    while (t.length < w) t += ' ';
+    return t;
+  }
   function tCenter(t) {
     t = String(t);
+    if (t.length > TICKET_W) t = t.substring(0, TICKET_W);
     var pad = Math.max(0, Math.floor((TICKET_W - t.length) / 2));
     return new Array(pad + 1).join(' ') + t;
   }
@@ -287,17 +294,16 @@
     l = String(l); r = String(r);
     var space = TICKET_W - l.length - r.length;
     if (space < 1) space = 1;
-    return l + new Array(space + 1).join(' ') + r;
+    return l + new Array(space).join(' ') + r;
   }
-  // Encadre une ligne de contenu entre les bordures '='
+  // Encadre une ligne : '=' + marge + contenu(36) + marge + '='
   function tLine(content) {
     content = String(content);
     if (content.length > TICKET_W) content = content.substring(0, TICKET_W);
-    var pad = TICKET_W - content.length;
-    return '=' + content + new Array(pad + 1).join(' ') + '=';
+    return '=' + ' ' + tPadEnd(content, TICKET_W) + ' ' + '=';
   }
   // Ligne vide à l'intérieur de la bordure
-  function tBlank() { return '=' + new Array(TICKET_W + 1).join(' ') + '='; }
+  function tBlank() { return '=' + new Array(TICKET_W + 3).join(' ') + '='; }
 
   // ================= Bon de cuisine =================
 
