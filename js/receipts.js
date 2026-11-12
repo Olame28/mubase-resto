@@ -101,7 +101,7 @@
     L.push(tLine(tCenter('Eglise Bon Berger')));
     L.push(tLine(tCenter('+243 825 451 103')));
     L.push(tLine(tCenter('+243 979 373 663')));
-    L.push(TICKET_SEP);
+    L.push(TICKET_DASH);
     // Infos vente encadrées
     L.push(tLine(tCenter('RECU N° ' + sale.receiptNo)));
     L.push(tLine(tCenter(U.fmtDateTime(sale.date))));
@@ -111,7 +111,7 @@
       var kn = sale.kitchenBatches.map(function (b) { return b.no; }).filter(Boolean).join(', ');
       if (kn) L.push(tLine(tCenter('Bons cuisine : ' + kn)));
     }
-    L.push(TICKET_SEP);
+    L.push(TICKET_DASH);
     // Articles
     sale.items.forEach(function (it) {
       var label = it.qty + 'x ' + it.name;
@@ -128,7 +128,7 @@
       L.push(tLine(tRow('  Total', U.fmtUSD(tu) + ' / ' + U.fmtFC(it.unitFC * it.qty))));
       L.push(tBlank());
     });
-    L.push(TICKET_SEP);
+    L.push(TICKET_DASH);
     // Totaux
     if (sale.discountFC > 0) {
       L.push(tLine(tRow('Remise', '-' + U.fmtFC(sale.discountFC) +
@@ -137,7 +137,7 @@
     L.push(tLine(tRow('TOTAL USD', U.fmtUSD(sale.totalUSD))));
     L.push(tLine(tRow('TOTAL FC', U.fmtFC(sale.totalFC))));
     L.push(tLine('Taux applique : 1 $ = ' + Math.round(sale.rate) + ' FC'));
-    L.push(TICKET_SEP);
+    L.push(TICKET_DASH);
     // Paiement
     var p = sale.payment || {};
     var ml = { USD: 'USD', FC: 'Francs FC', MIXED: 'Mixte USD+FC' }[p.method] || p.method;
@@ -146,11 +146,12 @@
     if (p.fcReceived) L.push(tLine(tRow('  Recu FC', U.fmtFC(p.fcReceived))));
     L.push(tLine(tRow('  Monnaie USD', U.fmtUSD(p.usdChange || 0))));
     L.push(tLine(tRow('  Monnaie FC', U.fmtFC(p.fcChange || 0))));
-    L.push(TICKET_SEP);
+    L.push(TICKET_DASH);
     L.push(tLine(tCenter('Merci de votre visite !')));
     if (sale.status === 'cancelled') {
       L.push(tLine(tCenter('*** VENTE ANNULEE ***')));
     }
+    L.push(TICKET_BOT);
     L.push(tBlank());
     L.push(tBlank());
     return L.join('\n');
@@ -180,7 +181,7 @@
     L.push(tLine(tCenter('*** NOTRE MENU ***')));
     L.push(tLine(tCenter('Goma, Himbi 2 - Eglise Bon Berger')));
     L.push(tLine(tCenter('+243 825 451 103 / +243 979 373 663')));
-    L.push(TICKET_SEP);
+    L.push(TICKET_DASH);
     order.forEach(function (cat) {
       var list = byCat[cat];
       if (!list || !list.length) return;
@@ -213,9 +214,10 @@
       });
       L.push('');
     });
-    L.push(TICKET_SEP);
+    L.push(TICKET_DASH);
     L.push(tLine(tCenter('Taux indicatif : 1 $ = ' + Math.round(MUBASE.Currency.getRate()) + ' FC')));
     L.push(tLine(tCenter('Prix susceptibles de changer')));
+    L.push(TICKET_BOT);
     L.push(tBlank());
     L.push(tBlank());
     return L.join('\n');
@@ -273,11 +275,12 @@
     document.getElementById('receiptModal').classList.remove('hidden');
   };
 
-  // Ticket texte avec bordure encadrée (compatible toutes imprimantes).
+  // Ticket texte avec cadre propre : bordures '*', séparateurs '-'.
   // Contenu utile = 36 car. + 1 marge de chaque cote = 38 + 2 bordures = 40.
   var TICKET_W = 36;
-  var TICKET_SEP = '========================================';
-  var TICKET_DASH = '----------------------------------------';
+  var TICKET_SEP = '****************************************';
+  var TICKET_DASH = '*--------------------------------------*';
+  var TICKET_BOT = '****************************************';
 
   function tPadEnd(t, w) {
     t = String(t);
@@ -296,14 +299,14 @@
     if (space < 1) space = 1;
     return l + new Array(space).join(' ') + r;
   }
-  // Encadre une ligne : '=' + marge + contenu(36) + marge + '='
+  // Ligne encadrée : '*' + marge + contenu(36) + marge + '*'
   function tLine(content) {
     content = String(content);
     if (content.length > TICKET_W) content = content.substring(0, TICKET_W);
-    return '=' + ' ' + tPadEnd(content, TICKET_W) + ' ' + '=';
+    return '*' + ' ' + tPadEnd(content, TICKET_W) + ' ' + '*';
   }
-  // Ligne vide à l'intérieur de la bordure
-  function tBlank() { return '=' + new Array(TICKET_W + 3).join(' ') + '='; }
+  // Ligne vide à l'intérieur du cadre
+  function tBlank() { return '*' + new Array(TICKET_W + 3).join(' ') + '*'; }
 
   // ================= Bon de cuisine =================
 
@@ -319,7 +322,7 @@
     L.push(tLine(tCenter('Av. Felix Tshisekedi n82')));
     L.push(tLine(tCenter('Eglise Bon Berger')));
     L.push(tLine(tCenter('+243 825 451 103 / +243 979 373 663')));
-    L.push(TICKET_SEP);
+    L.push(TICKET_DASH);
     L.push(tLine('Table : ' + (tableName || '-')));
     L.push(tLine('Date  : ' + U.fmtDateTime(new Date())));
     L.push(TICKET_DASH);
@@ -333,7 +336,7 @@
         L.push(tLine('   ' + n));
       }
     });
-    L.push(TICKET_DASH);
+    L.push(TICKET_BOT);
     L.push(tBlank());
     L.push(tBlank());
     return L.join('\n');
