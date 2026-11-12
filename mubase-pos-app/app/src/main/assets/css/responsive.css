@@ -1,0 +1,78 @@
+/* MUBASE POS - Adaptation écrans tactiles et petits écrans */
+/* Citaq H10-3 : ecran 10" 1024x768 paysage — ajustements specifiques */
+@media (max-width: 1100px) {
+  .cart-panel { width: 300px; }
+  .product-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  .product-card { min-height: 96px; padding: 10px; }
+  .brand-sub { display: none; }
+  .topbar-actions .btn-nav { padding: 8px 8px; font-size: 13px; }
+}
+
+@media (max-width: 900px) {
+  #posView { flex-direction: column; }
+  /* Barre du haut : une seule ligne avec scroll horizontal */
+  #topbar { height: 56px; min-height: 56px; flex-wrap: nowrap; overflow-x: auto; padding: 0 8px; gap: 6px; }
+  .brand { min-width: 0; }
+  .brand-sub { display: none; }
+  .topbar-status { flex: 0 0 auto; }
+  .topbar-actions { flex-wrap: nowrap; }
+  .btn-nav { padding: 8px 8px; font-size: 12px; white-space: nowrap; }
+  .pos-left { min-height: 0; }
+  .cart-panel {
+    width: 100%;
+    height: 58%;
+    min-height: 300px;
+    border-left: none;
+    border-top: 1px solid var(--border);
+  }
+  /* Footer compact : une seule ligne de total + boutons */
+  .cart-footer { padding: 6px 8px; }
+  .cart-totals .total-line:not(.total-final) { display: none; }
+  .total-final { font-size: 17px; padding-top: 2px; }
+  .cart-actions { margin-top: 6px; gap: 4px; }
+  .cart-actions .btn { min-height: 40px; padding: 6px 8px; font-size: 13px; }
+  .btn-big { font-size: 15px; padding: 8px 10px; }
+  .cart-header { padding: 6px 10px; }
+  .table-select { height: 36px; font-size: 13px; }
+  .product-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+}
+
+/* Très petit écran / affichage Android agrandi (viewport ~200px) */
+@media (max-width: 480px) {
+  html, body { font-size: 12px; }
+  #topbar { height: auto; padding: 4px 6px; gap: 4px; }
+  .brand-name { font-size: 15px; }
+  .brand-sub { display: none; }
+  .badge { font-size: 10px; padding: 2px 6px; }
+  .btn-nav { font-size: 11px; padding: 6px 6px; min-height: 36px; }
+  .pos-left { padding: 4px; }
+  .search-bar input { height: 38px; font-size: 13px; }
+  .cat-tab { font-size: 11px; padding: 7px 9px; }
+  .product-grid { grid-template-columns: repeat(2, 1fr); gap: 5px; padding: 2px; }
+  .product-card { min-height: 78px; padding: 7px; }
+  .product-name { font-size: 12px; }
+  .product-price { font-size: 12px; }
+  .cart-panel { width: 100%; height: 55%; min-height: 280px; }
+  .cart-header h2 { font-size: 14px; }
+  .cart-footer { padding: 6px 8px; }
+  .cart-actions { margin-top: 6px; }
+  .table-select { height: 36px; font-size: 13px; }
+  .qty-btn { width: 34px; height: 34px; font-size: 16px; }
+  .btn { font-size: 13px; padding: 6px 10px; min-height: 38px; }
+  .btn-big { font-size: 15px; }
+  .modal-box { padding: 12px; }
+  .report-content { font-size: 12px; }
+}
+
+@media (max-width: 560px) {
+  .product-grid { grid-template-columns: repeat(2, 1fr); }
+  .pay-methods { flex-direction: column; }
+  .cart-actions { flex-wrap: wrap; }
+}
+
+/* Amélioration tactile : zones de tap plus grandes sur petit écran */
+@media (pointer: coarse) {
+  .btn { min-height: 48px; }
+  .cat-tab { padding: 12px 16px; }
+  .qty-btn { width: 48px; height: 48px; }
+}

@@ -1,0 +1,23 @@
+/* MUBASE POS - Styles d'impression reçu 80 mm */
+@media print {
+  body * { visibility: hidden !important; }
+  #printArea, #printArea * { visibility: visible !important; }
+  #printArea {
+    position: absolute;
+    left: 0; top: 0;
+    width: 72mm; /* 80 mm moins marges imprimante */
+    margin: 0; padding: 0;
+  }
+  .receipt-print { font-family: "Courier New", monospace; font-size: 12px; color: #000; }
+  .receipt-print .r-center { text-align: center; }
+  .receipt-print .r-line { border-top: 1px dashed #000; margin: 6px 0; }
+  .receipt-print table { width: 100%; border-collapse: collapse; }
+  .receipt-print td { padding: 1px 0; vertical-align: top; }
+  .receipt-print .r-right { text-align: right; }
+  .receipt-print .r-bold { font-weight: bold; }
+  .receipt-print .r-big { font-size: 15px; font-weight: bold; }
+}
+
+@media screen {
+  #printArea { display: none; }
+}

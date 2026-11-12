@@ -53,10 +53,19 @@ public class MainActivity extends Activity {
             }
         }, "MUBASEPrint");
 
+        final boolean[] triedAlt = {false};
         webView.setWebViewClient(new WebViewClient() {
             @Override public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                // Garde toute la navigation dans le WebView local
                 return false;
+            }
+            @Override public void onReceivedError(WebView view, int errorCode,
+                    String description, String failingUrl) {
+                // Secours : si le chemin www/ echoue, tenter la racine assets
+                if (!triedAlt[0] && failingUrl != null &&
+                        failingUrl.indexOf("android_asset/www/") >= 0) {
+                    triedAlt[0] = true;
+                    view.loadUrl("file:///android_asset/index.html");
+                }
             }
         });
         webView.setWebChromeClient(new WebChromeClient());
