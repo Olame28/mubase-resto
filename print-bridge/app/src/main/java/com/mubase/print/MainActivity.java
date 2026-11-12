@@ -235,8 +235,8 @@ public class MainActivity extends Activity {
                 .replace('Ç', 'C')
                 .replace('’', '\'').replace('‘', '\'')
                 .replace('“', '"').replace('”', '"')
-                .replace('€', 'EUR').replace('°', 'deg')
-                .replace('…', '...');
+                .replace('€', 'E').replace('°', 'o')
+                .replace('…', '.');
     }
 
     private void writeSerial(byte[] data) throws Exception {

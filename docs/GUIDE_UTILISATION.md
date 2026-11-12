@@ -21,7 +21,13 @@
    renseigné leur prix dans Paramètres → Produits.
 5. Les accompagnements (Riz, Frites, Foufou) sont marqués **INCLUS** et
    n'augmentent pas le total.
-6. Touchez **Encaisser**.
+6. **Envoyer en cuisine** : imprime le bon de cuisine des articles pas
+   encore envoyés (table, heure, quantités, notes — sans prix). Les articles
+   envoyés deviennent **verrouillés** (✓cuisine, non modifiables) : si le
+   client commande autre chose, ajoutez les nouveaux articles et renvoyez en
+   cuisine — seul le nouveau bon s'imprimera.
+7. **Encaisser** quand le client paie : le reçu final récapitule toute la
+   commande (articles envoyés + derniers ajouts).
 
 ## Encaissement
 
