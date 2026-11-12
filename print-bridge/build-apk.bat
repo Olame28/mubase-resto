@@ -27,20 +27,21 @@ echo [2/6] Lien de l'APK non signee...
   --manifest app\src\main\AndroidManifest.xml --java %OUT%\gen %OUT%\res.zip
 if errorlevel 1 goto :err
 
+setlocal enabledelayedexpansion
 echo [3/6] Compilation Java...
+set CLS=
+for /r %OUT%\classes %%f in (*.class) do set CLS=!CLS! "%%f"
 javac -source 8 -target 8 -encoding UTF-8 -cp %PLATFORM% -d %OUT%\classes ^
   %OUT%\gen\com\mubase\print\R.java ^
-  app\src\main\java\com\mubase\print\MainActivity.java
+  app\src\main\java\com\mubase\print\MainActivity.java ^
+  app\src\main\java\com\mubase\print\PrintService.java ^
+  app\src\main\java\com\mubase\print\BootReceiver.java
 if errorlevel 1 goto :err
 
 echo [4/6] Dex (d8)...
-call %BT%\d8.bat --release --lib %PLATFORM% --output %OUT%\dex ^
-  %OUT%\classes\com\mubase\print\MainActivity.class ^
-  %OUT%\classes\com\mubase\print\MainActivity$1.class ^
-  %OUT%\classes\com\mubase\print\MainActivity$2.class ^
-  %OUT%\classes\com\mubase\print\MainActivity$3.class ^
-  %OUT%\classes\com\mubase\print\MainActivity$4.class ^
-  %OUT%\classes\com\mubase\print\R.class
+set DEXCLS=
+for /r %OUT%\classes %%f in (*.class) do set DEXCLS=!DEXCLS! "%%f"
+call %BT%\d8.bat --release --lib %PLATFORM% --output %OUT%\dex %DEXCLS%
 if errorlevel 1 goto :err
 
 echo [5/6] Assemblage APK...

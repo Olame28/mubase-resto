@@ -90,10 +90,10 @@
     return h.join('\n');
   };
 
-  // Version texte (48 colonnes) du reçu pour l'imprimante thermique directe
+  // Version ticket ESC/POS (stylée) du reçu pour l'imprimante thermique.
   R.buildReceiptText = function (sale) {
-    var W = 32; // largeur utile pour rester lisible
-    var lines = [];
+    var W = 40;
+    var L = [];
     function c(t) { // centré
       t = String(t);
       var pad = Math.max(0, Math.floor((W - t.length) / 2));
@@ -105,45 +105,59 @@
       if (space < 1) space = 1;
       return l + new Array(space + 1).join(' ') + r;
     }
-    lines.push(c(RESTO.name.toUpperCase()));
-    lines.push(c(RESTO.address));
-    lines.push(c(RESTO.phones.join(' / ')));
-    lines.push('================================');
-    lines.push('Recu N° ' + sale.receiptNo);
-    lines.push('Date   : ' + U.fmtDateTime(sale.date));
-    lines.push('Table  : ' + (sale.tableName || '-'));
-    lines.push('Serveur: ' + (sale.server || '-'));
-    lines.push('--------------------------------');
+    // En-tête restaurant
+    L.push(CMD.center + CMD.dblOn + CMD.boldOn + 'MUBASE');
+    L.push(CMD.dblOff + CMD.boldOff + 'Coffee & Restaurant');
+    L.push(CMD.left);
+    L.push(c(RESTO.address));
+    L.push(c(RESTO.phones.join(' / ')));
+    L.push(CMD.sep);
+    // Infos vente
+    L.push(CMD.center + CMD.boldOn);
+    L.push('RECU N° ' + sale.receiptNo);
+    L.push('Date   : ' + U.fmtDateTime(sale.date));
+    L.push('Table  : ' + (sale.tableName || '-'));
+    L.push('Serveur: ' + (sale.server || '-'));
+    L.push(CMD.boldOff + CMD.left);
+    L.push('----------------------------------------');
+    // Articles
     sale.items.forEach(function (it) {
       var label = it.qty + 'x ' + it.name;
-      if (it.note) label += ' (' + it.note + ')';
+      if (it.note) label += '\n     > ' + it.note;
       if (it.free) label += ' [INCLUS]';
-      lines.push(label);
+      L.push(CMD.boldOn + label + CMD.boldOff);
       var tu = Math.round(it.qty * it.unitUSD * 100) / 100;
-      lines.push(row('   ' + U.fmtUSD(it.unitUSD), U.fmtFC(it.unitFC)));
-      lines.push(row('   Total', U.fmtUSD(tu) + ' / ' + U.fmtFC(it.unitFC * it.qty)));
+      L.push(row('   ' + U.fmtUSD(it.unitUSD) + ' /u', U.fmtFC(it.unitFC) + ' /u'));
+      L.push(row('   Total', U.fmtUSD(tu) + ' / ' + U.fmtFC(it.unitFC * it.qty)));
     });
-    lines.push('================================');
+    L.push('========================================');
+    // Totaux
     if (sale.discountFC > 0) {
-      lines.push(row('Remise', '-' + U.fmtFC(sale.discountFC)));
+      L.push(row('Remise', '-' + U.fmtFC(sale.discountFC) +
+        ' / -' + U.fmtUSD(sale.discountUSD || 0)));
     }
-    lines.push(row('TOTAL USD', U.fmtUSD(sale.totalUSD)));
-    lines.push(row('TOTAL FC', U.fmtFC(sale.totalFC)));
-    lines.push('Taux: 1$ = ' + Math.round(sale.rate) + ' FC');
-    lines.push('--------------------------------');
+    L.push(CMD.boldOn);
+    L.push(row('TOTAL USD', U.fmtUSD(sale.totalUSD)));
+    L.push(row('TOTAL FC', U.fmtFC(sale.totalFC)));
+    L.push(CMD.boldOff);
+    L.push('Taux applique: 1 $ = ' + Math.round(sale.rate) + ' FC');
+    L.push('----------------------------------------');
+    // Paiement
     var p = sale.payment || {};
-    var ml = { USD: 'USD', FC: 'FC', MIXED: 'Mixte' }[p.method] || p.method;
-    lines.push('Paiement: ' + ml);
-    if (p.usdReceived) lines.push(row('Recu USD', U.fmtUSD(p.usdReceived)));
-    if (p.fcReceived) lines.push(row('Recu FC', U.fmtFC(p.fcReceived)));
-    lines.push(row('Monnaie USD', U.fmtUSD(p.usdChange || 0)));
-    lines.push(row('Monnaie FC', U.fmtFC(p.fcChange || 0)));
-    lines.push('================================');
-    lines.push(c('Merci de votre visite !'));
-    if (sale.status === 'cancelled') lines.push(c('*** VENTE ANNULEE ***'));
-    lines.push('');
-    lines.push('');
-    return lines.join('\n');
+    var ml = { USD: 'USD', FC: 'Francs FC', MIXED: 'Mixte USD+FC' }[p.method] || p.method;
+    L.push('Paiement : ' + ml);
+    if (p.usdReceived) L.push(row('  Recu USD', U.fmtUSD(p.usdReceived)));
+    if (p.fcReceived) L.push(row('  Recu FC', U.fmtFC(p.fcReceived)));
+    L.push(row('  Monnaie USD', U.fmtUSD(p.usdChange || 0)));
+    L.push(row('  Monnaie FC', U.fmtFC(p.fcChange || 0)));
+    L.push('========================================');
+    L.push(CMD.center + CMD.boldOn + 'Merci de votre visite !');
+    if (sale.status === 'cancelled') {
+      L.push(CMD.boldOn + '*** VENTE ANNULEE ***');
+    }
+    L.push('');
+    L.push('');
+    return L.join('\n');
   };
 
   // Affiche l'aperçu dans la modale
@@ -153,28 +167,45 @@
     document.getElementById('receiptModal').classList.remove('hidden');
   };
 
-  /* ================= Bon de cuisine ================= */
+  /* ================= Commandes ESC/POS =================
+   * Le service Android les transmet telles quelles a l'imprimante.
+   */
+  var ESCc = String.fromCharCode(0x1B);
+  var GSc = String.fromCharCode(0x1D);
+  var CMD = {
+    center: function () { return ESCc + 'a' + String.fromCharCode(1); },
+    left: function () { return ESCc + 'a' + String.fromCharCode(0); },
+    boldOn: function () { return ESCc + 'E' + String.fromCharCode(1); },
+    boldOff: function () { return ESCc + 'E' + String.fromCharCode(0); },
+    dblOn: function () { return GSc + '!' + String.fromCharCode(0x11); },
+    dblOff: function () { return GSc + '!' + String.fromCharCode(0x00); },
+    sep: '========================================\n'
+  };
 
-  // Génère le texte du bon de cuisine (envoyé à l'imprimante thermique
-  // via l'app compagnon, ou affiché en aperçu). Pas de prix : cuisine only.
+  // ================= Bon de cuisine =================
+
+  // Génère le ticket cuisine stylé (ESC/POS) pour l'imprimante thermique.
   R.buildKitchenTicketText = function (items, tableName) {
-    var lines = [];
-    lines.push('========================================');
-    lines.push('     ' + RESTO.name.toUpperCase());
-    lines.push('========================================');
-    lines.push('*** BON DE CUISINE ***');
-    lines.push('Table : ' + (tableName || '-'));
-    lines.push('Date  : ' + U.fmtDateTime(new Date()));
-    lines.push('----------------------------------------');
+    var L = [];
+    L.push(CMD.center + CMD.dblOn + CMD.boldOn);
+    L.push('BON DE CUISINE');
+    L.push(CMD.dblOff + CMD.boldOff);
+    L.push(RESTO.name);
+    L.push('----------------------------------------');
+    L.push(CMD.left + 'Table : ' + (tableName || '-') + '   Date : ' + U.fmtDateTime(new Date()));
+    L.push('----------------------------------------');
+    L.push(CMD.boldOn);
     items.forEach(function (it) {
-      var label = it.qty + 'x ' + it.name;
-      lines.push(label);
-      if (it.note) lines.push('     > ' + it.note);
+      L.push(it.qty + 'x ' + it.name);
+      L.push(CMD.boldOff);
+      if (it.note) L.push('     > ' + it.note);
+      if (it.qty > 1) L.push(CMD.boldOn); // réactive gras pour l'article suivant
     });
-    lines.push('----------------------------------------');
-    lines.push('');
-    lines.push('');
-    return lines.join('\n');
+    L.push(CMD.boldOff);
+    L.push('----------------------------------------');
+    L.push('');
+    L.push('');
+    return L.join('\n');
   };
 
   // Génère le HTML d'aperçu du bon de cuisine (secours si pas d'imprimante)
