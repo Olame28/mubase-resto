@@ -220,6 +220,40 @@
       });
   }
 
+  function testKitchen() {
+    suite('Bon de cuisine');
+    var O = MUBASE.Orders, DB = MUBASE.DB;
+    return O.loadCart('t4').then(function () {
+      var products = null;
+      return DB.getProducts().then(function (ps) {
+        products = ps;
+        var p = null;
+        ps.forEach(function (x) { if (x.name === 'Café noir') p = x; });
+        ok(!!p, 'Produit Café noir trouvé');
+        O.addProduct(p);
+        eq(O.unsentItems().length, 1, '1 article non envoyé en cuisine');
+        // envoi cuisine
+        var items = O.unsentItems();
+        var text = MUBASE.Receipts.buildKitchenTicketText(items, 'Table 4');
+        ok(text.indexOf('BON DE CUISINE') !== -1, 'Ticket cuisine contient le titre');
+        ok(text.indexOf('Café noir') !== -1, 'Ticket cuisine contient l\'article');
+        ok(text.indexOf('TOTAL') === -1, 'Ticket cuisine sans prix');
+        ok(O.markSentToKitchen(), 'Articles marqués envoyés');
+        eq(O.unsentItems().length, 0, 'Plus d\'article non envoyé');
+        ok(O.isLocked(0), 'Article envoyé verrouillé');
+        // réajout du même produit : doit créer une NOUVELLE ligne non envoyée
+        O.addProduct(p);
+        eq(O.cart.length, 2, 'Nouvel article identique = nouvelle ligne');
+        eq(O.unsentItems().length, 1, 'Seul le nouvel article est non envoyé');
+        // HTML ticket
+        var html = MUBASE.Receipts.buildKitchenTicketHTML(O.unsentItems(), 'Table 4');
+        ok(html.indexOf('Café noir') !== -1, 'Aperçu cuisine HTML OK');
+        // reçu texte pour impression directe
+        O.clearCart();
+      });
+    });
+  }
+
   function testCheckout() {
     suite('Encaissement et reçus');
     var O = MUBASE.Orders, P = MUBASE.Payments, DB = MUBASE.DB;
@@ -383,6 +417,7 @@
       function () { testPaymentsMath(); },
       function () { return testSecurity(); },
       function () { return testDB(); },
+      function () { return testKitchen(); },
       function () { return testCheckout(); },
       function () { return testReports(); },
       function () { return testBackup(); },
