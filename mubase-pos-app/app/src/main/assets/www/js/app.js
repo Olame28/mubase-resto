@@ -721,8 +721,9 @@
       }).catch(function () {
         // SW non supporté (ancien Android) : l'app fonctionne quand même en ligne
       });
-    } else {
+    } else if (!window.MUBASEPrint) {
       // Navigateur trop ancien pour les service workers : pas de hors ligne
+      // (dans l'APK natif, les fichiers sont locaux : pas besoin de SW)
       setTimeout(function () {
         U.toast('Attention : ce navigateur ne supporte pas le mode hors ligne. Utilisez Chrome à jour.', 'error');
       }, 3000);
