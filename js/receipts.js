@@ -276,11 +276,12 @@
   };
 
   // Ticket texte avec cadre propre : bordures '*', séparateurs '-'.
-  // Contenu utile = 36 car. + 1 marge de chaque cote = 38 + 2 bordures = 40.
-  var TICKET_W = 36;
-  var TICKET_SEP = '****************************************';
-  var TICKET_DASH = '*--------------------------------------*';
-  var TICKET_BOT = '****************************************';
+  // Papier 80mm = 48 caracteres par ligne.
+  // Contenu utile = 44 car. + 1 marge de chaque cote = 46 + 2 bordures = 48.
+  var TICKET_W = 44;
+  var TICKET_SEP = '************************************************';
+  var TICKET_DASH = '*----------------------------------------------*';
+  var TICKET_BOT = '************************************************';
 
   function tPadEnd(t, w) {
     t = String(t);
