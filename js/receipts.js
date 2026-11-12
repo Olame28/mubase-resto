@@ -390,6 +390,17 @@
     function finish(ok) {
       if (!done) { done = true; if (cb) cb(ok); }
     }
+    // Pont natif (APK Android) : impression thermique directe, synchrone
+    try {
+      if (window.MUBASEPrint && typeof window.MUBASEPrint.printTicket === 'function') {
+        var okNative = window.MUBASEPrint.printTicket(text);
+        finish(!!okNative);
+        return;
+      }
+    } catch (e) {
+      finish(false);
+      return;
+    }
     try {
       var xhr = new XMLHttpRequest();
       xhr.open('POST', PRINT_URL, true);
