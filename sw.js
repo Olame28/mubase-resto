@@ -6,12 +6,13 @@
 (function () {
   'use strict';
 
-  var CACHE_NAME = 'mubase-pos-v3'; // INCREMENTER a chaque publication
+  var CACHE_NAME = 'mubase-pos-v4'; // INCREMENTER a chaque publication
 
   // Liste des fichiers indispensables au démarrage hors ligne.
   var ASSETS = [
     './',
     './index.html',
+    './?source=pwa',
     './manifest.json',
     './css/style.css',
     './css/responsive.css',
@@ -98,12 +99,18 @@
           }
           return response;
         }).catch(function () {
-          // Hors ligne et ressource absente : renvoyer la page d'accueil
-          // pour les navigations afin de ne jamais afficher une erreur brute.
+          // Hors ligne : pour les navigations, on sert la page d'accueil
+          // en dernier recours — jamais d'écran "no internet".
           if (request.mode === 'navigate') {
+            return caches.match('./index.html').then(function (hit) {
+              return hit || caches.match('./');
+            });
+          }
+          try {
+            return new Response('', { status: 404 });
+          } catch (e) {
             return caches.match('./index.html');
           }
-          return new Response('', { status: 404 });
         });
       })
     );
