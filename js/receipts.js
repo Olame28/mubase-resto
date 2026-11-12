@@ -90,22 +90,185 @@
     return h.join('\n');
   };
 
+  // Version texte (48 colonnes) du reçu pour l'imprimante thermique directe
+  R.buildReceiptText = function (sale) {
+    var W = 32; // largeur utile pour rester lisible
+    var lines = [];
+    function c(t) { // centré
+      t = String(t);
+      var pad = Math.max(0, Math.floor((W - t.length) / 2));
+      return new Array(pad + 1).join(' ') + t;
+    }
+    function row(l, r) {
+      l = String(l); r = String(r);
+      var space = W - l.length - r.length;
+      if (space < 1) space = 1;
+      return l + new Array(space + 1).join(' ') + r;
+    }
+    lines.push(c(RESTO.name.toUpperCase()));
+    lines.push(c(RESTO.address));
+    lines.push(c(RESTO.phones.join(' / ')));
+    lines.push('================================');
+    lines.push('Recu N° ' + sale.receiptNo);
+    lines.push('Date   : ' + U.fmtDateTime(sale.date));
+    lines.push('Table  : ' + (sale.tableName || '-'));
+    lines.push('Serveur: ' + (sale.server || '-'));
+    lines.push('--------------------------------');
+    sale.items.forEach(function (it) {
+      var label = it.qty + 'x ' + it.name;
+      if (it.note) label += ' (' + it.note + ')';
+      if (it.free) label += ' [INCLUS]';
+      lines.push(label);
+      var tu = Math.round(it.qty * it.unitUSD * 100) / 100;
+      lines.push(row('   ' + U.fmtUSD(it.unitUSD), U.fmtFC(it.unitFC)));
+      lines.push(row('   Total', U.fmtUSD(tu) + ' / ' + U.fmtFC(it.unitFC * it.qty)));
+    });
+    lines.push('================================');
+    if (sale.discountFC > 0) {
+      lines.push(row('Remise', '-' + U.fmtFC(sale.discountFC)));
+    }
+    lines.push(row('TOTAL USD', U.fmtUSD(sale.totalUSD)));
+    lines.push(row('TOTAL FC', U.fmtFC(sale.totalFC)));
+    lines.push('Taux: 1$ = ' + Math.round(sale.rate) + ' FC');
+    lines.push('--------------------------------');
+    var p = sale.payment || {};
+    var ml = { USD: 'USD', FC: 'FC', MIXED: 'Mixte' }[p.method] || p.method;
+    lines.push('Paiement: ' + ml);
+    if (p.usdReceived) lines.push(row('Recu USD', U.fmtUSD(p.usdReceived)));
+    if (p.fcReceived) lines.push(row('Recu FC', U.fmtFC(p.fcReceived)));
+    lines.push(row('Monnaie USD', U.fmtUSD(p.usdChange || 0)));
+    lines.push(row('Monnaie FC', U.fmtFC(p.fcChange || 0)));
+    lines.push('================================');
+    lines.push(c('Merci de votre visite !'));
+    if (sale.status === 'cancelled') lines.push(c('*** VENTE ANNULEE ***'));
+    lines.push('');
+    lines.push('');
+    return lines.join('\n');
+  };
+
   // Affiche l'aperçu dans la modale
   R.showReceipt = function (sale) {
+    R._lastSale = sale;
     document.getElementById('receiptContainer').innerHTML = R.buildReceiptHTML(sale);
     document.getElementById('receiptModal').classList.remove('hidden');
   };
 
-  // Imprime le dernier reçu affiché via window.print()
+  /* ================= Bon de cuisine ================= */
+
+  // Génère le texte du bon de cuisine (envoyé à l'imprimante thermique
+  // via l'app compagnon, ou affiché en aperçu). Pas de prix : cuisine only.
+  R.buildKitchenTicketText = function (items, tableName) {
+    var lines = [];
+    lines.push('========================================');
+    lines.push('     ' + RESTO.name.toUpperCase());
+    lines.push('========================================');
+    lines.push('*** BON DE CUISINE ***');
+    lines.push('Table : ' + (tableName || '-'));
+    lines.push('Date  : ' + U.fmtDateTime(new Date()));
+    lines.push('----------------------------------------');
+    items.forEach(function (it) {
+      var label = it.qty + 'x ' + it.name;
+      lines.push(label);
+      if (it.note) lines.push('     > ' + it.note);
+    });
+    lines.push('----------------------------------------');
+    lines.push('');
+    lines.push('');
+    return lines.join('\n');
+  };
+
+  // Génère le HTML d'aperçu du bon de cuisine (secours si pas d'imprimante)
+  R.buildKitchenTicketHTML = function (items, tableName) {
+    var h = [];
+    h.push('<div class="receipt-print">');
+    h.push('<div class="r-center r-bold r-big">' + U.esc(RESTO.name) + '</div>');
+    h.push('<div class="r-center r-bold">*** BON DE CUISINE ***</div>');
+    h.push('<div class="r-line"></div>');
+    h.push('<table>');
+    h.push('<tr><td>Table</td><td class="r-right">' + U.esc(tableName || '-') + '</td></tr>');
+    h.push('<tr><td>Date</td><td class="r-right">' + U.esc(U.fmtDateTime(new Date())) + '</td></tr>');
+    h.push('</table>');
+    h.push('<div class="r-line"></div>');
+    items.forEach(function (it) {
+      h.push('<div class="r-bold">' + it.qty + 'x ' + U.esc(it.name) + '</div>');
+      if (it.note) h.push('<div>     &gt; ' + U.esc(it.note) + '</div>');
+    });
+    h.push('<div class="r-line"></div>');
+    h.push('</div>');
+    return h.join('\n');
+  };
+
+  /* ================= Impression directe (app compagnon) =================
+   * Tente d'envoyer le texte à l'app "MUBASE Print" sur 127.0.0.1:8090.
+   * Retourne true si l'impression directe a réussi, false sinon
+   * (l'appelant proposera alors l'aperçu window.print() en secours).
+   */
+  var PRINT_URL = 'http://127.0.0.1:8090/print';
+
+  R.printDirect = function (text, cb) {
+    var done = false;
+    function finish(ok) {
+      if (!done) { done = true; if (cb) cb(ok); }
+    }
+    try {
+      var xhr = new XMLHttpRequest();
+      xhr.open('POST', PRINT_URL, true);
+      xhr.timeout = 2500;
+      xhr.setRequestHeader('Content-Type', 'text/plain; charset=utf-8');
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState === 4) {
+          finish(xhr.status >= 200 && xhr.status < 300);
+        }
+      };
+      xhr.ontimeout = function () { finish(false); };
+      xhr.onerror = function () { finish(false); };
+      xhr.send(text);
+    } catch (e) {
+      finish(false);
+    }
+    // Filet de sécurité si aucun événement ne revient
+    setTimeout(function () { finish(false); }, 4000);
+  };
+
+  // Envoie un bon de cuisine : direct si possible, sinon aperçu Android
+  R.sendToKitchen = function (items, tableName, onPrinted) {
+    var text = R.buildKitchenTicketText(items, tableName);
+    R.printDirect(text, function (ok) {
+      if (ok) {
+        U.toast('Bon de cuisine imprimé.', 'ok');
+        if (onPrinted) onPrinted(true);
+      } else {
+        // Secours : aperçu d'impression Android
+        document.getElementById('printArea').innerHTML = R.buildKitchenTicketHTML(items, tableName);
+        U.toast('Imprimante directe indisponible : aperçu d\'impression ouvert.', 'error');
+        setTimeout(function () { window.print(); }, 100);
+        if (onPrinted) onPrinted(false);
+      }
+    });
+  };
+
+  // Imprime : tente d'abord l'impression directe (app compagnon),
+  // sinon bascule sur l'aperçu window.print() classique.
   R.printLast = function () {
     var container = document.getElementById('receiptContainer');
     if (!container || !container.innerHTML) {
       U.toast('Aucun reçu à imprimer.', 'error');
       return;
     }
+    if (R._lastSale) {
+      var text = R.buildReceiptText(R._lastSale);
+      R.printDirect(text, function (ok) {
+        if (!ok) R.printLastFallback();
+      });
+      return;
+    }
+    R.printLastFallback();
+  };
+
+  R.printLastFallback = function () {
+    var container = document.getElementById('receiptContainer');
     var area = document.getElementById('printArea');
     area.innerHTML = container.innerHTML;
-    // Petit délai pour laisser le DOM se mettre à jour
     setTimeout(function () {
       window.print();
     }, 100);
@@ -129,7 +292,17 @@
       payment: { method: 'FC', fcReceived: MUBASE.Currency.usdToFC(2) + 1000, fcChange: 1000, usdReceived: 0, usdChange: 0 }
     };
     R.showReceipt(fake);
-    setTimeout(R.printLast, 300);
+    setTimeout(function () {
+      var text = '========================================\n' +
+        '     TEST IMPRESSION MUBASE POS\n' +
+        '========================================\n' +
+        'Si vous lisez ceci, l\'imprimante\n' +
+        'thermique fonctionne !\n' +
+        'Date: ' + U.fmtDateTime(new Date()) + '\n\n\n';
+      R.printDirect(text, function (ok) {
+        if (!ok) setTimeout(R.printLast, 300);
+      });
+    }, 300);
   };
 
   // Réimpression d'une vente passée

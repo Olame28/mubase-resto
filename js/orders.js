@@ -82,11 +82,13 @@
       note: '',
       unitUSD: prices.usd,
       unitFC: prices.fc,
-      free: !!product.free
+      free: !!product.free,
+      sent: false // false = pas encore envoyé en cuisine
     };
-    // Regroupe les articles identiques sans note
+    // Regroupe les articles identiques sans note ET non envoyés en cuisine.
+    // Un article déjà envoyé ne fusionne jamais : il reste verrouillé.
     for (var i = 0; i < O.cart.length; i++) {
-      if (O.cart[i].productId === line.productId && !O.cart[i].note) {
+      if (O.cart[i].productId === line.productId && !O.cart[i].note && !O.cart[i].sent) {
         O.cart[i].qty += 1;
         O.saveCart();
         if (MUBASE.App) MUBASE.App.refreshCartUI();
@@ -162,6 +164,34 @@
       if (MUBASE.App) MUBASE.App.refreshTablesUI();
       return true;
     });
+  };
+
+  // Articles non encore envoyés en cuisine
+  O.unsentItems = function (cart) {
+    cart = cart || O.cart;
+    return cart.filter(function (it) { return !it.sent; });
+  };
+
+  O.hasUnsent = function () {
+    return O.unsentItems().length > 0;
+  };
+
+  // Marque les articles non envoyés comme envoyés (après impression cuisine OK)
+  O.markSentToKitchen = function () {
+    var changed = false;
+    O.cart.forEach(function (it) {
+      if (!it.sent) { it.sent = true; changed = true; }
+    });
+    if (changed) {
+      O.saveCart();
+      if (MUBASE.App) MUBASE.App.refreshCartUI();
+    }
+    return changed;
+  };
+
+  // Vrai si l'index correspond à un article verrouillé (envoyé en cuisine)
+  O.isLocked = function (index) {
+    return !!(O.cart[index] && O.cart[index].sent);
   };
 
   // Totaux du panier courant (figés : prix unitaires stockés dans les lignes)

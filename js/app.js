@@ -155,6 +155,15 @@
     document.getElementById('totalFinal').textContent =
       U.fmtUSD(t.usd) + ' / ' + U.fmtFC(t.fc);
 
+    // Bouton cuisine : actif seulement s'il reste des articles non envoyés
+    var kb = document.getElementById('btnKitchen');
+    if (kb) {
+      kb.disabled = !O.hasUnsent();
+      kb.textContent = O.hasUnsent()
+        ? 'Envoyer en cuisine (' + O.unsentItems().length + ')'
+        : 'Envoyer en cuisine';
+    }
+
     if (O.currentTableId) {
       document.getElementById('tableBadge').textContent = O.tableName(O.currentTableId);
       var sel = document.getElementById('tableSelect');
@@ -172,7 +181,9 @@
     O.cart.forEach(function (it, idx) {
       var lineUSD = Math.round(it.qty * it.unitUSD * 100) / 100;
       var lineFC = it.unitFC * it.qty;
-      html += '<div class="cart-item">' +
+      var sentCls = it.sent ? ' sent' : '';
+      var dis = it.sent ? ' disabled' : '';
+      html += '<div class="cart-item' + sentCls + '">' +
         '<div class="cart-item-info">' +
         '<div class="cart-item-name">' + U.esc(it.name) + '</div>' +
         (it.note ? '<div class="cart-item-note">' + U.esc(it.note) + '</div>' : '') +
@@ -180,12 +191,12 @@
         U.esc(U.fmtFC(lineFC)) + '</div>' +
         '</div>' +
         '<div class="qty-controls">' +
-        '<button class="qty-btn" data-a="dec" data-i="' + idx + '">−</button>' +
+        '<button class="qty-btn" data-a="dec" data-i="' + idx + '"' + dis + '>−</button>' +
         '<span class="qty-val">' + it.qty + '</span>' +
-        '<button class="qty-btn" data-a="inc" data-i="' + idx + '">+</button>' +
+        '<button class="qty-btn" data-a="inc" data-i="' + idx + '"' + dis + '>+</button>' +
         '</div>' +
-        '<button class="item-note-btn" data-a="note" data-i="' + idx + '" title="Note">✎</button>' +
-        '<button class="item-del" data-a="del" data-i="' + idx + '">✕</button>' +
+        '<button class="item-note-btn" data-a="note" data-i="' + idx + '" title="Note"' + dis + '>✎</button>' +
+        '<button class="item-del" data-a="del" data-i="' + idx + '"' + dis + '>✕</button>' +
         '</div>';
     });
     box.innerHTML = html;
@@ -193,8 +204,13 @@
     var btns = box.querySelectorAll('button');
     for (var i = 0; i < btns.length; i++) {
       btns[i].onclick = function () {
+        if (this.disabled) return;
         var a = this.getAttribute('data-a');
         var idx = parseInt(this.getAttribute('data-i'), 10);
+        if (O.isLocked(idx)) {
+          U.toast('Article déjà envoyé en cuisine : non modifiable.', 'error');
+          return;
+        }
         if (a === 'inc') O.changeQty(idx, 1);
         else if (a === 'dec') O.changeQty(idx, -1);
         else if (a === 'del') O.removeItem(idx);
@@ -289,6 +305,24 @@
       document.getElementById('pinInput').value = '';
       document.getElementById('pinInput').focus();
     }
+  };
+
+  /* ---------- Bon de cuisine ---------- */
+
+  App.sendToKitchen = function () {
+    var items = O.unsentItems();
+    if (!items.length) {
+      U.toast('Tous les articles ont déjà été envoyés en cuisine.', 'error');
+      return;
+    }
+    var tableName = O.tableName(O.currentTableId);
+    MUBASE.Receipts.sendToKitchen(items, tableName, function (directOk) {
+      // On marque comme envoyés dans les deux cas : le bon a été produit
+      // (imprimé directement ou via l'aperçu). Le service peut réimprimer
+      // depuis l'historique si besoin.
+      O.markSentToKitchen();
+      MUBASE.Security.log('CUISINE', tableName + ' | ' + items.length + ' article(s) envoyé(s)');
+    });
   };
 
   /* ================= Paiement ================= */
@@ -708,6 +742,7 @@
     };
     document.getElementById('btnCheckout').onclick = App.openPayment;
     document.getElementById('btnTransfer').onclick = App.openTransfer;
+    document.getElementById('btnKitchen').onclick = App.sendToKitchen;
     // Navigation
     document.getElementById('btnTables').onclick = function () {
       App.showView(document.getElementById('tablesView').classList.contains('active') ? 'pos' : 'tables');

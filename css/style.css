@@ -68,6 +68,10 @@ html, body {
 }
 .btn:active { transform: scale(0.97); }
 .btn-primary { background: var(--accent); border-color: var(--accent); color: #111; }
+.btn-kitchen { background: #1f6feb; border-color: #1f6feb; color: #fff; width: 100%; }
+.btn-kitchen:disabled { opacity: 0.45; }
+.cart-item.sent { opacity: 0.6; }
+.cart-item.sent .cart-item-name::after { content: " ✓cuisine"; font-size: 11px; color: var(--ok); font-weight: 400; }
 .btn-danger { background: #3d1d1f; border-color: var(--danger); color: var(--danger); }
 .btn-big { font-size: 18px; padding: 12px 24px; }
 .btn-nav { padding: 8px 12px; font-size: 14px; }
