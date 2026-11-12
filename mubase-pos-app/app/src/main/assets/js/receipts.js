@@ -98,7 +98,6 @@
     L.push(tLine(tCenter('MUBASE Coffee & Restaurant')));
     L.push(tLine(tCenter('Goma, Himbi 2')));
     L.push(tLine(tCenter('Av. Felix Tshisekedi n82')));
-    L.push(tLine(tCenter('Eglise Bon Berger')));
     L.push(tLine(tCenter('+243 825 451 103')));
     L.push(tLine(tCenter('+243 979 373 663')));
     L.push(TICKET_DASH);
@@ -129,13 +128,14 @@
       L.push(tBlank());
     });
     L.push(TICKET_DASH);
-    // Totaux
+    // Totaux - montant mis en evidence
     if (sale.discountFC > 0) {
       L.push(tLine(tRow('Remise', '-' + U.fmtFC(sale.discountFC) +
         ' / -' + U.fmtUSD(sale.discountUSD || 0))));
     }
-    L.push(tLine(tRow('TOTAL USD', U.fmtUSD(sale.totalUSD))));
-    L.push(tLine(tRow('TOTAL FC', U.fmtFC(sale.totalFC))));
+    L.push(tLine(tCenter('>>> TOTAL A PAYER <<<')));
+    L.push(tLine(tCenter(U.fmtFC(sale.totalFC))));
+    L.push(tLine(tCenter('(' + U.fmtUSD(sale.totalUSD) + ' US)')));
     L.push(tLine('Taux applique : 1 $ = ' + Math.round(sale.rate) + ' FC'));
     L.push(TICKET_DASH);
     // Paiement
@@ -179,7 +179,7 @@
     L.push(TICKET_SEP);
     L.push(tLine(tCenter('MUBASE Coffee & Restaurant')));
     L.push(tLine(tCenter('*** NOTRE MENU ***')));
-    L.push(tLine(tCenter('Goma, Himbi 2 - Eglise Bon Berger')));
+    L.push(tLine(tCenter('Goma, Himbi 2')));
     L.push(tLine(tCenter('+243 825 451 103 / +243 979 373 663')));
     L.push(TICKET_DASH);
     order.forEach(function (cat) {
@@ -321,7 +321,6 @@
     L.push(tLine(tCenter(ticketNo || '')));
     L.push(tLine(tCenter('Goma, Himbi 2')));
     L.push(tLine(tCenter('Av. Felix Tshisekedi n82')));
-    L.push(tLine(tCenter('Eglise Bon Berger')));
     L.push(tLine(tCenter('+243 825 451 103 / +243 979 373 663')));
     L.push(TICKET_DASH);
     L.push(tLine('Table : ' + (tableName || '-')));
