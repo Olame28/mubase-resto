@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MUBASE POS - Tests</title>
+<style>
+  body { font-family: monospace; background:#0d1117; color:#e6edf3; padding:20px; }
+  h1 { color:#f0a500; }
+  .pass { color:#3fb950; }
+  .fail { color:#f85149; font-weight:bold; }
+  .suite { margin: 14px 0; }
+  .suite h2 { color:#58a6ff; font-size:16px; }
+  #summary { margin-top:20px; font-size:18px; }
+  button { padding:10px 18px; font-size:16px; margin:8px 8px 8px 0; }
+</style>
+</head>
+<body>
+<h1>MUBASE POS — Tests automatisés</h1>
+<p>Base de données de test isolée : <code>mubase_pos_test_db</code> (ne touche pas aux données réelles).</p>
+<button id="btnRun">Lancer tous les tests</button>
+<button id="btnReset">Réinitialiser la base de test</button>
+<div id="results"></div>
+<div id="summary"></div>
+
+<script>
+  // Base de test isolée, définie AVANT le chargement de database.js
+  window.__MUBASE_DB_NAME__ = 'mubase_pos_test_db';
+</script>
+<script src="../js/utils.js"></script>
+<script src="../js/currency.js"></script>
+<script src="../js/database.js"></script>
+<script src="../js/security.js"></script>
+<script src="../js/products.js"></script>
+<script src="../js/orders.js"></script>
+<script src="../js/payments.js"></script>
+<script src="../js/receipts.js"></script>
+<script src="../js/reports.js"></script>
+<script src="../js/settings.js"></script>
+<script src="../js/backup.js"></script>
+<script src="tests.js"></script>
+</body>
+</html>
