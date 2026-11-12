@@ -721,6 +721,11 @@
       }).catch(function () {
         // SW non supporté (ancien Android) : l'app fonctionne quand même en ligne
       });
+    } else {
+      // Navigateur trop ancien pour les service workers : pas de hors ligne
+      setTimeout(function () {
+        U.toast('Attention : ce navigateur ne supporte pas le mode hors ligne. Utilisez Chrome à jour.', 'error');
+      }, 3000);
     }
   };
 
