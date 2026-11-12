@@ -10,18 +10,31 @@
 
 @media (max-width: 900px) {
   #posView { flex-direction: column; }
+  /* Barre du haut : une seule ligne avec scroll horizontal */
+  #topbar { height: 56px; min-height: 56px; flex-wrap: nowrap; overflow-x: auto; padding: 0 8px; gap: 6px; }
+  .brand { min-width: 0; }
+  .brand-sub { display: none; }
+  .topbar-status { flex: 0 0 auto; }
+  .topbar-actions { flex-wrap: nowrap; }
+  .btn-nav { padding: 8px 8px; font-size: 12px; white-space: nowrap; }
   .pos-left { min-height: 0; }
   .cart-panel {
     width: 100%;
-    height: 45%;
-    min-height: 200px;
+    height: 58%;
+    min-height: 300px;
     border-left: none;
     border-top: 1px solid var(--border);
   }
+  /* Footer compact : une seule ligne de total + boutons */
+  .cart-footer { padding: 6px 8px; }
+  .cart-totals .total-line:not(.total-final) { display: none; }
+  .total-final { font-size: 17px; padding-top: 2px; }
+  .cart-actions { margin-top: 6px; gap: 4px; }
+  .cart-actions .btn { min-height: 40px; padding: 6px 8px; font-size: 13px; }
+  .btn-big { font-size: 15px; padding: 8px 10px; }
+  .cart-header { padding: 6px 10px; }
+  .table-select { height: 36px; font-size: 13px; }
   .product-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
-  .topbar-actions { flex-wrap: wrap; }
-  .brand-sub { display: none; }
-  #topbar { height: auto; min-height: 56px; padding: 6px 12px; flex-wrap: wrap; }
 }
 
 /* Très petit écran / affichage Android agrandi (viewport ~200px) */
