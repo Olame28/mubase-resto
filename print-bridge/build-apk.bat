@@ -45,8 +45,11 @@ if errorlevel 1 goto :err
 
 echo [5/6] Assemblage APK...
 copy /y %OUT%\app-unsigned.apk %OUT%\app.apk >nul
-%BT%\aapt.exe add %OUT%\app.apk %OUT%\dex\classes.dex >nul
-if errorlevel 1 goto :err
+pushd %OUT%\dex
+%BT%\aapt.exe add ..\app.apk classes.dex >nul
+set AAPTERR=%errorlevel%
+popd
+if not "%AAPTERR%"=="0" goto :err
 
 echo [6/6] Signature APK...
 if not exist %OUT%\debug.keystore (
