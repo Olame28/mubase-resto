@@ -316,12 +316,14 @@
       return;
     }
     var tableName = O.tableName(O.currentTableId);
-    MUBASE.Receipts.sendToKitchen(items, tableName, function (directOk) {
+    var ticketNo = MUBASE.Receipts.nextKitchenNo();
+    MUBASE.Receipts.sendToKitchen(items, tableName, ticketNo, function (directOk) {
       // On marque comme envoyés dans les deux cas : le bon a été produit
       // (imprimé directement ou via l'aperçu). Le service peut réimprimer
       // depuis l'historique si besoin.
-      O.markSentToKitchen();
-      MUBASE.Security.log('CUISINE', tableName + ' | ' + items.length + ' article(s) envoyé(s)');
+      O.markSentToKitchen(ticketNo);
+      MUBASE.Security.log('CUISINE', tableName + ' | ' + ticketNo + ' | ' +
+        items.length + ' article(s) envoyé(s)');
     });
   };
 
@@ -451,7 +453,7 @@
     var dateVal = document.getElementById('reportDate').value || U.todayStr();
     content.innerHTML = '<div class="report-empty">Chargement...</div>';
 
-    var needDate = ['date', 'payment', 'category', 'product'].indexOf(state.reportType) !== -1;
+    var needDate = ['date', 'payment', 'category', 'product', 'cancellations'].indexOf(state.reportType) !== -1;
     dateRow.classList.toggle('hidden', !needDate);
 
     var promise;
@@ -460,6 +462,8 @@
       case 'payment': promise = MUBASE.Reports.byPayment(dateVal); break;
       case 'category': promise = MUBASE.Reports.byCategory(dateVal, state.products); break;
       case 'product': promise = MUBASE.Reports.byProduct(dateVal); break;
+      case 'cancellations': promise = MUBASE.Reports.cancellations(dateVal); break;
+      case 'audit': promise = MUBASE.Reports.auditLog(); break;
       case 'shifts': promise = MUBASE.Reports.shifts(); break;
       default: promise = MUBASE.Reports.daily();
     }
@@ -530,10 +534,19 @@
   App.closeShift = function () {
     U.confirm('Lancer la clôture Z du jour ? (les ventes ne sont PAS supprimées)', function (yes) {
       if (!yes) return;
-      MUBASE.Settings.closeShift().then(function (sum) {
-        U.toast('Clôture Z enregistrée : ' + sum.salesCount + ' ventes, ' +
-          U.fmtUSD(sum.totalUSD) + ' / ' + U.fmtFC(sum.totalFC), 'ok');
-        App.renderReport();
+      U.promptText('Espèces comptées en caisse (FC)', 'Ex : 450000', function (cash) {
+        if (cash === null) return;
+        MUBASE.Settings.closeShift(cash).then(function (sum) {
+          var msg = 'Clôture Z : ' + sum.salesCount + ' ventes, ' +
+            U.fmtUSD(sum.totalUSD) + ' / ' + U.fmtFC(sum.totalFC);
+          if (sum.countedCashFC != null) {
+            msg += ' | Espèces attendues ' + U.fmtFC(sum.expectedCashFC) +
+              ', comptées ' + U.fmtFC(sum.countedCashFC) +
+              ', écart ' + U.fmtFC(sum.cashDiffFC);
+          }
+          U.toast(msg, 'ok');
+          App.renderReport();
+        });
       });
     });
   };

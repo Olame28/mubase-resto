@@ -154,6 +154,47 @@
     });
   };
 
+  /* ---------- Annulations & remises (contrôle anti-fraude) ---------- */
+  R.cancellations = function (dateStr) {
+    return MUBASE.DB.getSalesByDate(dateStr || U.todayStr()).then(function (sales) {
+      var cancelled = sales.filter(function (s) { return s.status === 'cancelled'; });
+      var discounts = onlyPaid(sales).filter(function (s) {
+        return (s.discountFC || 0) > 0;
+      });
+      var html = '<h4>Annulations & remises du ' + U.esc(dateStr || U.todayStr()) + '</h4>';
+      html += '<p><strong>' + cancelled.length + '</strong> vente(s) annulée(s), ' +
+        '<strong>' + discounts.length + '</strong> remise(s) accordée(s)</p>';
+      if (!cancelled.length && !discounts.length) {
+        return html + '<div class="report-empty">Aucune anomalie.</div>';
+      }
+      var rows = [];
+      cancelled.forEach(function (s) {
+        rows.push([U.esc(s.receiptNo), U.esc(s.tableName || '-'),
+          U.esc(U.fmtUSD(s.totalUSD)), U.esc(U.fmtFC(s.totalFC)),
+          U.esc(s.cancelReason || '-'), U.esc(U.fmtDateTime(s.cancelledAt))]);
+      });
+      discounts.forEach(function (s) {
+        rows.push([U.esc(s.receiptNo) + ' (remise)', U.esc(s.tableName || '-'),
+          U.esc(U.fmtUSD(s.totalUSD)), U.esc('-' + U.fmtFC(s.discountFC)),
+          'remise', U.esc(U.fmtDateTime(s.date))]);
+      });
+      return html + escTable(['Reçu', 'Table', 'Total USD', 'FC', 'Motif', 'Date'], rows);
+    });
+  };
+
+  /* ---------- Journal d'audit (qui a fait quoi) ---------- */
+  R.auditLog = function () {
+    return MUBASE.DB.getAudit().then(function (entries) {
+      entries.sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); });
+      var html = '<h4>Journal des opérations (100 dernières)</h4>';
+      var rows = entries.slice(0, 100).map(function (e) {
+        return [U.esc(U.fmtDateTime(e.date)), U.esc(e.action || '-'), U.esc(e.detail || '')];
+      });
+      return html + (rows.length ? escTable(['Date', 'Action', 'Détail'], rows)
+        : '<div class="report-empty">Journal vide.</div>');
+    });
+  };
+
   /* ---------- Clôtures Z ---------- */
   R.shifts = function () {
     return MUBASE.DB.getShifts().then(function (shifts) {

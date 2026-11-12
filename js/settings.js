@@ -37,10 +37,29 @@
     });
   };
 
-  // Clôture Z : enregistre un résumé sans supprimer les ventes
-  S.closeShift = function () {
+  // Clôture Z : enregistre un résumé SANS supprimer les ventes.
+  // cashCount : espèces comptées physiquement par le gérant (FC).
+  // expectedCashFC : espèces attendues = Σ encaissé - monnaie rendue
+  // (équivalent FC pour les ventes USD et mixtes au taux figé).
+  S.closeShift = function (cashCount) {
     var today = window.MUBASE.Utils.todayStr();
     return MUBASE.Reports.buildShiftSummary(today, today).then(function (sum) {
+      var rate = window.MUBASE.Currency.getRate();
+      var expected = 0;
+      sum.sales.forEach(function (s) {
+        var p = s.payment || {};
+        var r = s.rate || rate;
+        if (p.method === 'FC') {
+          expected += (p.fcReceived || 0) - (p.fcChange || 0);
+        } else if (p.method === 'USD') {
+          expected += Math.round(((p.usdReceived || 0) - (p.usdChange || 0)) * r);
+        } else if (p.method === 'MIXED') {
+          expected += Math.round((p.usdReceived || 0) * r) +
+            (p.fcReceived || 0) - (p.fcChange || 0);
+        }
+      });
+      var counted = parseInt(cashCount, 10);
+      var diff = isNaN(counted) ? null : counted - expected;
       return MUBASE.DB.addShift({
         date: new Date().toISOString(),
         day: today,
@@ -48,10 +67,17 @@
         totalUSD: sum.totalUSD,
         totalFC: sum.totalFC,
         byMethod: sum.byMethod,
+        expectedCashFC: expected,
+        countedCashFC: isNaN(counted) ? null : counted,
+        cashDiffFC: diff,
         closedBy: S.getServerName() || 'gérant'
       }).then(function () {
         MUBASE.Security.log('CLOTURE_Z', today + ' | ' + sum.salesCount +
-          ' ventes | ' + sum.totalUSD + ' $');
+          ' ventes | ' + sum.totalUSD + ' $ | attendu ' + expected +
+          ' FC | compté ' + (isNaN(counted) ? '?' : counted) + ' FC');
+        sum.expectedCashFC = expected;
+        sum.countedCashFC = isNaN(counted) ? null : counted;
+        sum.cashDiffFC = diff;
         return sum;
       });
     });

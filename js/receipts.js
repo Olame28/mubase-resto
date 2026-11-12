@@ -107,6 +107,10 @@
     L.push(tLine(tCenter(U.fmtDateTime(sale.date))));
     L.push(tLine(tCenter('Table : ' + (sale.tableName || '-'))));
     if (sale.server) L.push(tLine(tCenter('Serveur : ' + sale.server)));
+    if (sale.kitchenBatches && sale.kitchenBatches.length) {
+      var kn = sale.kitchenBatches.map(function (b) { return b.no; }).filter(Boolean).join(', ');
+      if (kn) L.push(tLine(tCenter('Bons cuisine : ' + kn)));
+    }
     L.push(TICKET_SEP);
     // Articles
     sale.items.forEach(function (it) {
@@ -299,11 +303,12 @@
 
   // Génère le texte du bon de cuisine (envoyé à l'imprimante thermique
   // via l'app compagnon, ou affiché en aperçu). Pas de prix : cuisine only.
-  R.buildKitchenTicketText = function (items, tableName) {
+  R.buildKitchenTicketText = function (items, tableName, ticketNo) {
     var L = [];
     L.push(TICKET_SEP);
     L.push(tLine(tCenter('MUBASE Coffee & Restaurant')));
     L.push(tLine(tCenter('*** BON DE CUISINE ***')));
+    L.push(tLine(tCenter(ticketNo || '')));
     L.push(tLine(tCenter('Goma, Himbi 2')));
     L.push(tLine(tCenter('Av. Felix Tshisekedi n82')));
     L.push(tLine(tCenter('Eglise Bon Berger')));
@@ -356,6 +361,21 @@
    */
   var PRINT_URL = 'http://127.0.0.1:8090/print';
 
+  /* ---------- Numérotation des bons de cuisine (traçabilité) ----------
+   * Format : KC-AAAAMMJJ-NNNN — imprimé sur le bon cuisine ET sur le reçu
+   * final : on peut toujours rapprocher une commande cuisine d'une vente.
+   */
+  R.nextKitchenNo = function () {
+    var dateKey = 'kitchen_counter_' + U.todayStr();
+    var counter = parseInt(MUBASE.DB.getSettingSync(dateKey) || '0', 10) + 1;
+    MUBASE.DB.setSetting(dateKey, String(counter));
+    var d = new Date();
+    function p(x) { return (x < 10 ? '0' : '') + x; }
+    var ymd = d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate());
+    var num = ('0000' + counter).slice(-4);
+    return 'KC-' + ymd + '-' + num;
+  };
+
   R.printDirect = function (text, cb) {
     var done = false;
     function finish(ok) {
@@ -382,8 +402,8 @@
   };
 
   // Envoie un bon de cuisine : direct si possible, sinon aperçu Android
-  R.sendToKitchen = function (items, tableName, onPrinted) {
-    var text = R.buildKitchenTicketText(items, tableName);
+  R.sendToKitchen = function (items, tableName, ticketNo, onPrinted) {
+    var text = R.buildKitchenTicketText(items, tableName, ticketNo);
     R.printDirect(text, function (ok) {
       if (ok) {
         U.toast('Bon de cuisine imprimé.', 'ok');

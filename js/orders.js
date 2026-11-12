@@ -42,6 +42,7 @@
     return MUBASE.DB.getCart(tableId).then(function (cart) {
       O.currentTableId = tableId;
       O.cart = (cart && cart.items) ? cart.items.slice() : [];
+      O.kitchenBatches = (cart && cart.kitchenBatches) ? cart.kitchenBatches.slice() : [];
       O.cartLoadedFor = tableId;
       if (MUBASE.App) MUBASE.App.refreshCartUI();
       if (MUBASE.App) MUBASE.App.refreshTablesUI();
@@ -58,6 +59,7 @@
     return MUBASE.DB.saveCart({
       tableId: O.currentTableId,
       items: O.cart,
+      kitchenBatches: O.kitchenBatches || [],
       updatedAt: new Date().toISOString()
     });
   };
@@ -176,17 +178,24 @@
     return O.unsentItems().length > 0;
   };
 
-  // Marque les articles non envoyés comme envoyés (après impression cuisine OK)
-  O.markSentToKitchen = function () {
-    var changed = false;
+  // Marque les articles non envoyés comme envoyés et enregistre le
+  // numéro du bon de cuisine (traçabilité cuisine <-> reçu final)
+  O.markSentToKitchen = function (ticketNo) {
+    var count = 0;
     O.cart.forEach(function (it) {
-      if (!it.sent) { it.sent = true; changed = true; }
+      if (!it.sent) { it.sent = true; count++; }
     });
-    if (changed) {
+    if (count > 0) {
+      if (!O.kitchenBatches) O.kitchenBatches = [];
+      O.kitchenBatches.push({
+        no: ticketNo || '',
+        date: new Date().toISOString(),
+        count: count
+      });
       O.saveCart();
       if (MUBASE.App) MUBASE.App.refreshCartUI();
     }
-    return changed;
+    return count > 0;
   };
 
   // Vrai si l'index correspond à un article verrouillé (envoyé en cuisine)
@@ -229,6 +238,7 @@
       totalFC: t.fc,
       discountUSD: 0,
       discountFC: 0,
+      kitchenBatches: (O.kitchenBatches || []).slice(),
       payment: payment,
       status: 'paid'
     };
@@ -237,6 +247,7 @@
   // Vide le panier après encaissement confirmé
   O.clearCart = function () {
     O.cart = [];
+    O.kitchenBatches = [];
     return O.saveCart().then(function () {
       if (MUBASE.App) MUBASE.App.refreshCartUI();
       if (MUBASE.App) MUBASE.App.refreshTablesUI();

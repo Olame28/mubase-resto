@@ -21,9 +21,19 @@ html, body {
   font-family: "Segoe UI", Roboto, Arial, sans-serif;
   font-size: 16px;
   overflow: hidden;
+  overscroll-behavior: none;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
+  touch-action: manipulation;
 }
+
+/* Défilement fluide sur zones scrollables (Android tactile) */
+.product-grid, .cart-items, .tables-grid, .report-content,
+.product-admin-list, .modal-box, .receipt-container {
+  -webkit-overflow-scrolling: touch;
+  overflow-y: auto;
+}
+.product-grid { overflow-x: hidden; }
 
 .hidden { display: none !important; }
 
