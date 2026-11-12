@@ -743,6 +743,10 @@
     document.getElementById('btnCheckout').onclick = App.openPayment;
     document.getElementById('btnTransfer').onclick = App.openTransfer;
     document.getElementById('btnKitchen').onclick = App.sendToKitchen;
+    // Impression du menu / tarif complet
+    document.getElementById('btnMenu').onclick = function () {
+      MUBASE.Receipts.printMenu(state.products);
+    };
     // Navigation
     document.getElementById('btnTables').onclick = function () {
       App.showView(document.getElementById('tablesView').classList.contains('active') ? 'pos' : 'tables');

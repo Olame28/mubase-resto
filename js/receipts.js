@@ -90,74 +90,176 @@
     return h.join('\n');
   };
 
-  // Version ticket ESC/POS (stylée) du reçu pour l'imprimante thermique.
+  // Ticket reçu encadré, 100% texte (compatible toutes imprimantes).
   R.buildReceiptText = function (sale) {
-    var W = 40;
     var L = [];
-    function c(t) { // centré
-      t = String(t);
-      var pad = Math.max(0, Math.floor((W - t.length) / 2));
-      return new Array(pad + 1).join(' ') + t;
-    }
-    function row(l, r) {
-      l = String(l); r = String(r);
-      var space = W - l.length - r.length;
-      if (space < 1) space = 1;
-      return l + new Array(space + 1).join(' ') + r;
-    }
-    // En-tête restaurant
-    L.push(CMD.center + CMD.dblOn + CMD.boldOn + 'MUBASE');
-    L.push(CMD.dblOff + CMD.boldOff + 'Coffee & Restaurant');
-    L.push(CMD.left);
-    L.push(c(RESTO.address));
-    L.push(c(RESTO.phones.join(' / ')));
-    L.push(CMD.sep);
-    // Infos vente
-    L.push(CMD.center + CMD.boldOn);
-    L.push('RECU N° ' + sale.receiptNo);
-    L.push('Date   : ' + U.fmtDateTime(sale.date));
-    L.push('Table  : ' + (sale.tableName || '-'));
-    L.push('Serveur: ' + (sale.server || '-'));
-    L.push(CMD.boldOff + CMD.left);
-    L.push('----------------------------------------');
+    // En-tête restaurant encadré
+    L.push(TICKET_SEP);
+    L.push(tLine(tCenter('MUBASE Coffee & Restaurant')));
+    L.push(tLine(tCenter('Goma, Himbi 2')));
+    L.push(tLine(tCenter('Av. Felix Tshisekedi n82')));
+    L.push(tLine(tCenter('Eglise Bon Berger')));
+    L.push(tLine(tCenter('+243 825 451 103')));
+    L.push(tLine(tCenter('+243 979 373 663')));
+    L.push(TICKET_SEP);
+    // Infos vente encadrées
+    L.push(tLine(tCenter('RECU N° ' + sale.receiptNo)));
+    L.push(tLine(tCenter(U.fmtDateTime(sale.date))));
+    L.push(tLine(tCenter('Table : ' + (sale.tableName || '-'))));
+    if (sale.server) L.push(tLine(tCenter('Serveur : ' + sale.server)));
+    L.push(TICKET_SEP);
     // Articles
     sale.items.forEach(function (it) {
       var label = it.qty + 'x ' + it.name;
-      if (it.note) label += '\n     > ' + it.note;
+      if (it.note) label += '  (' + it.note + ')';
       if (it.free) label += ' [INCLUS]';
-      L.push(CMD.boldOn + label + CMD.boldOff);
+      // coupe propre si trop long
+      while (label.length > TICKET_W) {
+        L.push(tLine(label.substring(0, TICKET_W)));
+        label = '   ' + label.substring(TICKET_W);
+      }
+      L.push(tLine(label));
       var tu = Math.round(it.qty * it.unitUSD * 100) / 100;
-      L.push(row('   ' + U.fmtUSD(it.unitUSD) + ' /u', U.fmtFC(it.unitFC) + ' /u'));
-      L.push(row('   Total', U.fmtUSD(tu) + ' / ' + U.fmtFC(it.unitFC * it.qty)));
+      L.push(tLine(tRow('  ' + U.fmtUSD(it.unitUSD), U.fmtFC(it.unitFC))));
+      L.push(tLine(tRow('  Total', U.fmtUSD(tu) + ' / ' + U.fmtFC(it.unitFC * it.qty))));
+      L.push(tBlank());
     });
-    L.push('========================================');
+    L.push(TICKET_SEP);
     // Totaux
     if (sale.discountFC > 0) {
-      L.push(row('Remise', '-' + U.fmtFC(sale.discountFC) +
-        ' / -' + U.fmtUSD(sale.discountUSD || 0)));
+      L.push(tLine(tRow('Remise', '-' + U.fmtFC(sale.discountFC) +
+        ' / -' + U.fmtUSD(sale.discountUSD || 0))));
     }
-    L.push(CMD.boldOn);
-    L.push(row('TOTAL USD', U.fmtUSD(sale.totalUSD)));
-    L.push(row('TOTAL FC', U.fmtFC(sale.totalFC)));
-    L.push(CMD.boldOff);
-    L.push('Taux applique: 1 $ = ' + Math.round(sale.rate) + ' FC');
-    L.push('----------------------------------------');
+    L.push(tLine(tRow('TOTAL USD', U.fmtUSD(sale.totalUSD))));
+    L.push(tLine(tRow('TOTAL FC', U.fmtFC(sale.totalFC))));
+    L.push(tLine('Taux applique : 1 $ = ' + Math.round(sale.rate) + ' FC'));
+    L.push(TICKET_SEP);
     // Paiement
     var p = sale.payment || {};
     var ml = { USD: 'USD', FC: 'Francs FC', MIXED: 'Mixte USD+FC' }[p.method] || p.method;
-    L.push('Paiement : ' + ml);
-    if (p.usdReceived) L.push(row('  Recu USD', U.fmtUSD(p.usdReceived)));
-    if (p.fcReceived) L.push(row('  Recu FC', U.fmtFC(p.fcReceived)));
-    L.push(row('  Monnaie USD', U.fmtUSD(p.usdChange || 0)));
-    L.push(row('  Monnaie FC', U.fmtFC(p.fcChange || 0)));
-    L.push('========================================');
-    L.push(CMD.center + CMD.boldOn + 'Merci de votre visite !');
+    L.push(tLine('Paiement : ' + ml));
+    if (p.usdReceived) L.push(tLine(tRow('  Recu USD', U.fmtUSD(p.usdReceived))));
+    if (p.fcReceived) L.push(tLine(tRow('  Recu FC', U.fmtFC(p.fcReceived))));
+    L.push(tLine(tRow('  Monnaie USD', U.fmtUSD(p.usdChange || 0))));
+    L.push(tLine(tRow('  Monnaie FC', U.fmtFC(p.fcChange || 0))));
+    L.push(TICKET_SEP);
+    L.push(tLine(tCenter('Merci de votre visite !')));
     if (sale.status === 'cancelled') {
-      L.push(CMD.boldOn + '*** VENTE ANNULEE ***');
+      L.push(tLine(tCenter('*** VENTE ANNULEE ***')));
     }
-    L.push('');
-    L.push('');
+    L.push(tBlank());
+    L.push(tBlank());
     return L.join('\n');
+  };
+
+  /* ================= Menu / tarif ================= */
+
+  // Ticket "menu" : la carte complète avec prix, groupée par catégorie.
+  // Utilisable pour imprimer le tarif client ou la carte cuisine.
+  R.buildMenuText = function (products) {
+    var prods = (products || []).filter(function (p) { return p.active !== false; });
+    var byCat = {};
+    var order = MUBASE.Products.CATEGORIES.slice();
+    prods.forEach(function (p) {
+      var cat = p.category || 'Autres';
+      if (!byCat[cat]) byCat[cat] = [];
+      byCat[cat].push(p);
+    });
+    function priceOf(p) {
+      if (p.free) return 'INCLUS';
+      var pr = MUBASE.Currency.productPrices(p);
+      return U.fmtUSD(pr.usd);
+    }
+    var L = [];
+    L.push(TICKET_SEP);
+    L.push(tLine(tCenter('MUBASE Coffee & Restaurant')));
+    L.push(tLine(tCenter('*** NOTRE MENU ***')));
+    L.push(tLine(tCenter('Goma, Himbi 2 - Eglise Bon Berger')));
+    L.push(tLine(tCenter('+243 825 451 103 / +243 979 373 663')));
+    L.push(TICKET_SEP);
+    order.forEach(function (cat) {
+      var list = byCat[cat];
+      if (!list || !list.length) return;
+      L.push(tLine(tCenter(cat.toUpperCase())));
+      L.push(TICKET_DASH);
+      list.forEach(function (p) {
+        var name = p.name;
+        var price = priceOf(p);
+        // nom long : on coupe proprement
+        if (name.length > TICKET_W - price.length - 2) {
+          L.push(tLine(name.substring(0, TICKET_W)));
+          L.push(tLine(tRow('', price)));
+        } else {
+          L.push(tLine(tRow(name, price)));
+        }
+      });
+      L.push('');
+    });
+    // Catégories éventuelles non listées
+    Object.keys(byCat).forEach(function (cat) {
+      if (order.indexOf(cat) !== -1) return;
+      L.push(tLine(tCenter(cat.toUpperCase())));
+      byCat[cat].forEach(function (p) {
+        var name = p.name, price = priceOf(p);
+        L.push(tLine(name.length > TICKET_W - price.length - 2 ?
+          name.substring(0, TICKET_W) : tRow(name, price)));
+        if (name.length > TICKET_W - price.length - 2) {
+          L.push(tLine(tRow('', price)));
+        }
+      });
+      L.push('');
+    });
+    L.push(TICKET_SEP);
+    L.push(tLine(tCenter('Taux indicatif : 1 $ = ' + Math.round(MUBASE.Currency.getRate()) + ' FC')));
+    L.push(tLine(tCenter('Prix susceptibles de changer')));
+    L.push(tBlank());
+    L.push(tBlank());
+    return L.join('\n');
+  };
+
+  // Aperçu HTML du menu (secours sans imprimante directe)
+  R.buildMenuHTML = function (products) {
+    var prods = (products || []).filter(function (p) { return p.active !== false; });
+    var byCat = {};
+    MUBASE.Products.CATEGORIES.forEach(function (c) { byCat[c] = []; });
+    byCat['Autres'] = [];
+    prods.forEach(function (p) { (byCat[p.category] || byCat['Autres']).push(p); });
+    var h = [];
+    h.push('<div class="receipt-print">');
+    h.push('<div class="r-center r-bold r-big">MUBASE Coffee &amp; Restaurant</div>');
+    h.push('<div class="r-center r-bold">*** NOTRE MENU ***</div>');
+    h.push('<div class="r-center">' + U.esc(RESTO.address) + '</div>');
+    h.push('<div class="r-center">' + RESTO.phones.join(' / ') + '</div>');
+    h.push('<div class="r-line"></div>');
+    MUBASE.Products.CATEGORIES.forEach(function (cat) {
+      var list = byCat[cat];
+      if (!list.length) return;
+      h.push('<div class="r-center r-bold">' + U.esc(cat.toUpperCase()) + '</div>');
+      list.forEach(function (p) {
+        var price = p.free ? 'INCLUS' : U.fmtUSD(MUBASE.Currency.productPrices(p).usd);
+        h.push('<div>' + U.esc(p.name) + '</div>');
+        h.push('<div class="r-right">' + U.esc(price) + '</div>');
+      });
+      h.push('<div class="r-line"></div>');
+    });
+    h.push('<div class="r-center">Prix susceptibles de changer</div>');
+    h.push('</div>');
+    return h.join('\n');
+  };
+
+  // Imprime le menu : direct si possible, sinon aperçu
+  R.printMenu = function (products, cb) {
+    var text = R.buildMenuText(products);
+    R.printDirect(text, function (ok) {
+      if (!ok) {
+        document.getElementById('printArea').innerHTML = R.buildMenuHTML(products);
+        U.toast('Imprimante directe indisponible : aperçu d\'impression ouvert.', 'error');
+        setTimeout(function () { window.print(); }, 100);
+      } else {
+        U.toast('Menu imprimé.', 'ok');
+      }
+      if (cb) cb(ok);
+    });
   };
 
   // Affiche l'aperçu dans la modale
@@ -167,44 +269,62 @@
     document.getElementById('receiptModal').classList.remove('hidden');
   };
 
-  /* ================= Commandes ESC/POS =================
-   * Le service Android les transmet telles quelles a l'imprimante.
-   */
-  var ESCc = String.fromCharCode(0x1B);
-  var GSc = String.fromCharCode(0x1D);
-  var CMD = {
-    center: function () { return ESCc + 'a' + String.fromCharCode(1); },
-    left: function () { return ESCc + 'a' + String.fromCharCode(0); },
-    boldOn: function () { return ESCc + 'E' + String.fromCharCode(1); },
-    boldOff: function () { return ESCc + 'E' + String.fromCharCode(0); },
-    dblOn: function () { return GSc + '!' + String.fromCharCode(0x11); },
-    dblOff: function () { return GSc + '!' + String.fromCharCode(0x00); },
-    sep: '========================================\n'
-  };
+  // Ticket texte avec bordure encadrée (compatible toutes imprimantes).
+  var TICKET_W = 38; // largeur utile entre les bordures
+  var TICKET_SEP = '========================================';
+  var TICKET_DASH = '----------------------------------------';
+
+  function tCenter(t) {
+    t = String(t);
+    var pad = Math.max(0, Math.floor((TICKET_W - t.length) / 2));
+    return new Array(pad + 1).join(' ') + t;
+  }
+  function tRow(l, r) {
+    l = String(l); r = String(r);
+    var space = TICKET_W - l.length - r.length;
+    if (space < 1) space = 1;
+    return l + new Array(space + 1).join(' ') + r;
+  }
+  // Encadre une ligne de contenu entre les bordures '='
+  function tLine(content) {
+    content = String(content);
+    if (content.length > TICKET_W) content = content.substring(0, TICKET_W);
+    var pad = TICKET_W - content.length;
+    return '=' + content + new Array(pad + 1).join(' ') + '=';
+  }
+  // Ligne vide à l'intérieur de la bordure
+  function tBlank() { return '=' + new Array(TICKET_W + 1).join(' ') + '='; }
 
   // ================= Bon de cuisine =================
 
-  // Génère le ticket cuisine stylé (ESC/POS) pour l'imprimante thermique.
+  // Génère le texte du bon de cuisine (envoyé à l'imprimante thermique
+  // via l'app compagnon, ou affiché en aperçu). Pas de prix : cuisine only.
   R.buildKitchenTicketText = function (items, tableName) {
     var L = [];
-    L.push(CMD.center + CMD.dblOn + CMD.boldOn);
-    L.push('BON DE CUISINE');
-    L.push(CMD.dblOff + CMD.boldOff);
-    L.push(RESTO.name);
-    L.push('----------------------------------------');
-    L.push(CMD.left + 'Table : ' + (tableName || '-') + '   Date : ' + U.fmtDateTime(new Date()));
-    L.push('----------------------------------------');
-    L.push(CMD.boldOn);
+    L.push(TICKET_SEP);
+    L.push(tLine(tCenter('MUBASE Coffee & Restaurant')));
+    L.push(tLine(tCenter('*** BON DE CUISINE ***')));
+    L.push(tLine(tCenter('Goma, Himbi 2')));
+    L.push(tLine(tCenter('Av. Felix Tshisekedi n82')));
+    L.push(tLine(tCenter('Eglise Bon Berger')));
+    L.push(tLine(tCenter('+243 825 451 103 / +243 979 373 663')));
+    L.push(TICKET_SEP);
+    L.push(tLine('Table : ' + (tableName || '-')));
+    L.push(tLine('Date  : ' + U.fmtDateTime(new Date())));
+    L.push(TICKET_DASH);
     items.forEach(function (it) {
-      L.push(it.qty + 'x ' + it.name);
-      L.push(CMD.boldOff);
-      if (it.note) L.push('     > ' + it.note);
-      if (it.qty > 1) L.push(CMD.boldOn); // réactive gras pour l'article suivant
+      var label = it.qty + 'x ' + it.name;
+      if (label.length > TICKET_W) label = label.substring(0, TICKET_W);
+      L.push(tLine(label));
+      if (it.note) {
+        var n = '> ' + it.note;
+        if (n.length > TICKET_W) n = n.substring(0, TICKET_W);
+        L.push(tLine('   ' + n));
+      }
     });
-    L.push(CMD.boldOff);
-    L.push('----------------------------------------');
-    L.push('');
-    L.push('');
+    L.push(TICKET_DASH);
+    L.push(tBlank());
+    L.push(tBlank());
     return L.join('\n');
   };
 
