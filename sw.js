@@ -6,7 +6,7 @@
 (function () {
   'use strict';
 
-  var CACHE_NAME = 'mubase-pos-v1';
+  var CACHE_NAME = 'mubase-pos-v2'; // INCREMENTER a chaque publication
 
   // Liste des fichiers indispensables au démarrage hors ligne.
   var ASSETS = [

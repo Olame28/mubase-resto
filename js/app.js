@@ -702,6 +702,11 @@
 
   App.registerSW = function () {
     if ('serviceWorker' in navigator) {
+      // Nouvelle version détectée -> recharger une fois pour prendre le nouveau cache
+      var reloaded = false;
+      navigator.serviceWorker.addEventListener('controllerchange', function () {
+        if (!reloaded) { reloaded = true; location.reload(); }
+      });
       navigator.serviceWorker.register('sw.js', { scope: './' }).then(function (reg) {
         // Mise à jour détectée : on prévient sans recharger brutalement
         reg.addEventListener('updatefound', function () {
