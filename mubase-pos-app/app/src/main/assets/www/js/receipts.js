@@ -108,7 +108,7 @@
     if (sale.server) L.push(tLine(tCenter('Serveur : ' + sale.server)));
     if (sale.kitchenBatches && sale.kitchenBatches.length) {
       var kn = sale.kitchenBatches.map(function (b) { return b.no; }).filter(Boolean).join(', ');
-      if (kn) L.push(tLine(tCenter('Bons cuisine : ' + kn)));
+      if (kn) L.push(tLine(tCenter('Bons commande : ' + kn)));
     }
     L.push(TICKET_DASH);
     // Articles
@@ -317,7 +317,7 @@
     var L = [];
     L.push(TICKET_SEP);
     L.push(tLine(tCenter('MUBASE Coffee & Restaurant')));
-    L.push(tLine(tCenter('*** BON DE CUISINE ***')));
+    L.push(tLine(tCenter('*** BON DE COMMANDE ***')));
     L.push(tLine(tCenter(ticketNo || '')));
     L.push(tLine(tCenter('Goma, Himbi 2')));
     L.push(tLine(tCenter('Av. Felix Tshisekedi n82')));
@@ -347,7 +347,7 @@
     var h = [];
     h.push('<div class="receipt-print">');
     h.push('<div class="r-center r-bold r-big">' + U.esc(RESTO.name) + '</div>');
-    h.push('<div class="r-center r-bold">*** BON DE CUISINE ***</div>');
+    h.push('<div class="r-center r-bold">*** BON DE COMMANDE ***</div>');
     h.push('<div class="r-line"></div>');
     h.push('<table>');
     h.push('<tr><td>Table</td><td class="r-right">' + U.esc(tableName || '-') + '</td></tr>');
@@ -426,7 +426,7 @@
     var text = R.buildKitchenTicketText(items, tableName, ticketNo);
     R.printDirect(text, function (ok) {
       if (ok) {
-        U.toast('Bon de cuisine imprimé.', 'ok');
+        U.toast('Bon de commande imprimé.', 'ok');
         if (onPrinted) onPrinted(true);
       } else {
         // Secours : aperçu d'impression Android

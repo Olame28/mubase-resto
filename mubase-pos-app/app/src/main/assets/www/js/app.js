@@ -160,8 +160,8 @@
     if (kb) {
       kb.disabled = !O.hasUnsent();
       kb.textContent = O.hasUnsent()
-        ? 'Envoyer en cuisine (' + O.unsentItems().length + ')'
-        : 'Envoyer en cuisine';
+        ? 'Envoyer commande (' + O.unsentItems().length + ')'
+        : 'Envoyer commande';
     }
 
     if (O.currentTableId) {
@@ -208,7 +208,7 @@
         var a = this.getAttribute('data-a');
         var idx = parseInt(this.getAttribute('data-i'), 10);
         if (O.isLocked(idx)) {
-          U.toast('Article déjà envoyé en cuisine : non modifiable.', 'error');
+          U.toast('Article déjà envoyé : non modifiable.', 'error');
           return;
         }
         if (a === 'inc') O.changeQty(idx, 1);
