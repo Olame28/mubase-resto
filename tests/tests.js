@@ -235,7 +235,7 @@
         // envoi cuisine
         var items = O.unsentItems();
         var text = MUBASE.Receipts.buildKitchenTicketText(items, 'Table 4');
-        ok(text.indexOf('BON DE CUISINE') !== -1, 'Ticket cuisine contient le titre');
+        ok(text.indexOf('BON DE COMMANDE') !== -1, 'Ticket commande contient le titre');
         ok(text.indexOf('Café noir') !== -1, 'Ticket cuisine contient l\'article');
         ok(text.indexOf('TOTAL') === -1, 'Ticket cuisine sans prix');
         ok(O.markSentToKitchen(), 'Articles marqués envoyés');
@@ -297,11 +297,11 @@
         ok(paid.every(function (x) { return x.rate === 2800; }), 'Taux figé à 2800 dans chaque vente');
         // reçus
         var html = MUBASE.Receipts.buildReceiptHTML(paid[0]);
-        ok(html.indexOf('MUBASE Coffee et Restaurant') !== -1, 'Reçu : nom restaurant');
+        ok(html.indexOf('MUBASE') !== -1, 'Reçu : nom restaurant');
         ok(html.indexOf(paid[0].receiptNo) !== -1, 'Reçu : numéro présent');
         ok(html.indexOf('Merci de votre visite') !== -1, 'Reçu : message de fin');
         ok(html.indexOf('+243 825 451 103') !== -1, 'Reçu : téléphone');
-        ok(html.indexOf('Table') !== -1, 'Reçu : table');
+        ok(html.indexOf('TOTAL À PAYER') !== -1, 'Reçu : total à payer visible');
         return DB.getSaleByReceipt(paid[0].receiptNo);
       }).then(function (found) {
         ok(!!found, 'Recherche de vente par n° de reçu fonctionnelle');

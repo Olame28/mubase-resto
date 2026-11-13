@@ -7,82 +7,83 @@
   var R = {};
 
   var RESTO = {
-    name: 'MUBASE Coffee et Restaurant',
-    address: 'Goma, Himbi 2 - Avenue Félix Tshisekedi n°82 - Église Bon Berger',
+    name: 'MUBASE',
+    subtitle: 'COFFEE, RESTAURANT & PATISSERIE',
+    address: 'Goma, Himbi 2 - Av. Felix Tshisekedi n82',
     phones: ['+243 825 451 103', '+243 979 373 663']
   };
 
   R.RESTO = RESTO;
 
-  // Génère le HTML du reçu (utilisé pour l'aperçu et l'impression)
+  // Génère le HTML du reçu (utilisé pour l'aperçu et l'impression navigateur)
   R.buildReceiptHTML = function (sale) {
     var h = [];
     h.push('<div class="receipt-print">');
     h.push('<div class="r-center r-bold r-big">' + U.esc(RESTO.name) + '</div>');
+    h.push('<div class="r-center r-bold">' + U.esc(RESTO.subtitle) + '</div>');
     h.push('<div class="r-center">' + U.esc(RESTO.address) + '</div>');
     h.push('<div class="r-center">' + RESTO.phones.join(' | ') + '</div>');
-    h.push('<div class="r-line"></div>');
+    h.push('<div class="r-space"></div>');
     h.push('<table>');
     h.push('<tr><td>Reçu N°</td><td class="r-right r-bold">' + U.esc(sale.receiptNo) + '</td></tr>');
     h.push('<tr><td>Date</td><td class="r-right">' + U.esc(U.fmtDateTime(sale.date)) + '</td></tr>');
-    h.push('<tr><td>Table</td><td class="r-right">' + U.esc(sale.tableName || '-') + '</td></tr>');
-    h.push('<tr><td>Serveur</td><td class="r-right">' + U.esc(sale.server || '-') + '</td></tr>');
     h.push('</table>');
-    h.push('<div class="r-line"></div>');
+    h.push('<div class="r-space"></div>');
 
-    h.push('<table>');
+    h.push('<table class="r-items">');
+    h.push('<tr><th>Qté</th><th>Désignation</th><th class="r-right">P.U.</th><th class="r-right">Total</th></tr>');
     for (var i = 0; i < sale.items.length; i++) {
       var it = sale.items[i];
       var lineTotalUSD = Math.round(it.qty * it.unitUSD * 100) / 100;
-      var lineTotalFC = it.unitFC * it.qty;
-      var label = it.qty + 'x ' + it.name;
+      var label = it.name;
       if (it.note) label += ' (' + it.note + ')';
-      if (it.free) label += ' [INCLUS]';
-      h.push('<tr><td colspan="3">' + U.esc(label) + '</td></tr>');
+      if (it.free) label += ' [inclus]';
       h.push('<tr>');
-      h.push('<td></td>');
-      h.push('<td class="r-right">' + U.esc(U.fmtUSD(it.unitUSD)) + '</td>');
-      h.push('<td class="r-right">' + U.esc(U.fmtFC(it.unitFC)) + '</td>');
-      h.push('</tr>');
-      h.push('<tr>');
-      h.push('<td></td>');
-      h.push('<td class="r-right">Total</td>');
-      h.push('<td class="r-right">' + U.esc(U.fmtUSD(lineTotalUSD)) + ' / ' +
-        U.esc(U.fmtFC(lineTotalFC)) + '</td>');
+      h.push('<td class="r-nowrap">' + U.esc(it.qty) + '</td>');
+      h.push('<td>' + U.esc(label) + '</td>');
+      h.push('<td class="r-right r-nowrap">' + U.esc(U.fmtUSD(it.unitUSD)) + '</td>');
+      h.push('<td class="r-right r-nowrap">' + U.esc(U.fmtUSD(lineTotalUSD)) + '</td>');
       h.push('</tr>');
     }
     h.push('</table>');
-    h.push('<div class="r-line"></div>');
+    h.push('<div class="r-space"></div>');
     h.push('<table>');
     if (sale.discountFC > 0) {
       h.push('<tr><td>Remise</td><td class="r-right">-' + U.esc(U.fmtFC(sale.discountFC)) +
-        ' / -' + U.esc(U.fmtUSD(sale.discountUSD || 0)) + '</td></tr>');
+        ' (-' + U.esc(U.fmtUSD(sale.discountUSD || 0)) + ')</td></tr>');
     }
-    h.push('<tr><td class="r-bold r-big">TOTAL</td><td class="r-right r-bold r-big">' +
-      U.esc(U.fmtUSD(sale.totalUSD)) + '</td></tr>');
-    h.push('<tr><td class="r-bold r-big">TOTAL</td><td class="r-right r-bold r-big">' +
-      U.esc(U.fmtFC(sale.totalFC)) + '</td></tr>');
-    h.push('<tr><td>Taux appliqué</td><td class="r-right">1 $ = ' +
-      U.esc(U.fmtFC(sale.rate).replace(' FC', '')) + ' FC</td></tr>');
     h.push('</table>');
-    h.push('<div class="r-line"></div>');
+    h.push('<div class="r-total-box">');
+    h.push('<div class="r-center r-bold">TOTAL À PAYER</div>');
+    h.push('<div class="r-center r-bold r-big">' + U.esc(U.fmtFC(sale.totalFC)) + '</div>');
+    h.push('<div class="r-center">(' + U.esc(U.fmtUSD(sale.totalUSD)) + ' US)</div>');
+    h.push('</div>');
+    h.push('<div class="r-center">Taux : 1 $ = ' +
+      U.esc(U.fmtFC(sale.rate).replace(' FC', '')) + ' FC</div>');
+    h.push('<div class="r-space"></div>');
 
     var p = sale.payment || {};
-    var methodLabel = { USD: 'USD', FC: 'FC (Francs)', MIXED: 'Mixte USD + FC' }[p.method] || p.method;
+    var methodLabel = { USD: 'USD', FC: 'Francs FC', MIXED: 'Mixte USD+FC' }[p.method] || p.method;
     h.push('<table>');
     h.push('<tr><td>Paiement</td><td class="r-right">' + U.esc(methodLabel) + '</td></tr>');
-    if (p.method === 'USD' || p.method === 'MIXED') {
-      h.push('<tr><td>Reçu USD</td><td class="r-right">' + U.esc(U.fmtUSD(p.usdReceived || 0)) + '</td></tr>');
+    if (p.usdReceived) {
+      h.push('<tr><td>Reçu USD</td><td class="r-right">' + U.esc(U.fmtUSD(p.usdReceived)) + '</td></tr>');
     }
-    if (p.method === 'FC' || p.method === 'MIXED') {
-      h.push('<tr><td>Reçu FC</td><td class="r-right">' + U.esc(U.fmtFC(p.fcReceived || 0)) + '</td></tr>');
+    if (p.fcReceived) {
+      h.push('<tr><td>Reçu FC</td><td class="r-right">' + U.esc(U.fmtFC(p.fcReceived)) + '</td></tr>');
     }
-    h.push('<tr><td>Monnaie USD</td><td class="r-right">' + U.esc(U.fmtUSD(p.usdChange || 0)) + '</td></tr>');
-    h.push('<tr><td>Monnaie FC</td><td class="r-right">' + U.esc(U.fmtFC(p.fcChange || 0)) + '</td></tr>');
+    if (p.usdChange > 0) {
+      h.push('<tr><td>Monnaie USD</td><td class="r-right">' + U.esc(U.fmtUSD(p.usdChange)) + '</td></tr>');
+    }
+    if (p.fcChange > 0) {
+      h.push('<tr><td>Monnaie FC</td><td class="r-right">' + U.esc(U.fmtFC(p.fcChange)) + '</td></tr>');
+    }
+    if (!p.usdChange && !p.fcChange) {
+      h.push('<tr><td>Monnaie</td><td class="r-right">aucune</td></tr>');
+    }
     h.push('</table>');
-    h.push('<div class="r-line"></div>');
+    h.push('<div class="r-space"></div>');
     h.push('<div class="r-center">Merci de votre visite !</div>');
-    h.push('<div class="r-center">' + U.esc(RESTO.name) + '</div>');
     if (sale.status === 'cancelled') {
       h.push('<div class="r-center r-bold">*** VENTE ANNULÉE ***</div>');
     }
@@ -90,70 +91,95 @@
     return h.join('\n');
   };
 
-  // Ticket reçu encadré, 100% texte (compatible toutes imprimantes).
+  // Reçu client minimaliste 80mm (48 colonnes) — texte brut, sans bordures.
+  // Sections : identité / n° et date / articles en colonnes / TOTAL À PAYER /
+  // paiement / merci. Pas de serveur, table ni référence cuisine (usage interne).
   R.buildReceiptText = function (sale) {
+    var W = 48;
+    function pe(t, w) { t = String(t); while (t.length < w) t += ' '; return t; }
+    function ps(t, w) { t = String(t); while (t.length < w) t = ' ' + t; return t; }
+    function ctr(t) {
+      t = String(t);
+      if (t.length > W) t = t.substring(0, W);
+      var p = Math.floor((W - t.length) / 2);
+      return pe('', p) + t;
+    }
+    function row2(l, r) { return pe(l, W - String(r).length) + r; }
+    function wrapWords(text, width) {
+      var words = String(text).split(' '), lines = [], cur = '';
+      words.forEach(function (wd) {
+        if ((cur + ' ' + wd).trim().length > width) {
+          if (cur) lines.push(cur);
+          cur = wd;
+        } else {
+          cur = (cur ? cur + ' ' : '') + wd;
+        }
+      });
+      if (cur) lines.push(cur);
+      return lines.length ? lines : [''];
+    }
+    // Ligne article : Qté(3) + Désignation(22) + P.U.(10) + Total(10)
+    var QW = 3, DW = 22, PW = 10, TW = 10;
+    function itemRow(qty, name, pu, tot) {
+      return pe(qty, QW) + ' ' + pe(name, DW) + ' ' + ps(pu, PW) + ' ' + ps(tot, TW);
+    }
+
     var L = [];
-    // En-tête restaurant encadré
-    L.push(TICKET_SEP);
-    L.push(tLine(tCenter('MUBASE Coffee & Restaurant')));
-    L.push(tLine(tCenter('Goma, Himbi 2')));
-    L.push(tLine(tCenter('Av. Felix Tshisekedi n82')));
-    L.push(tLine(tCenter('+243 825 451 103')));
-    L.push(tLine(tCenter('+243 979 373 663')));
-    L.push(TICKET_DASH);
-    // Infos vente encadrées
-    L.push(tLine(tCenter('RECU N° ' + sale.receiptNo)));
-    L.push(tLine(tCenter(U.fmtDateTime(sale.date))));
-    L.push(tLine(tCenter('Table : ' + (sale.tableName || '-'))));
-    if (sale.server) L.push(tLine(tCenter('Serveur : ' + sale.server)));
-    if (sale.kitchenBatches && sale.kitchenBatches.length) {
-      var kn = sale.kitchenBatches.map(function (b) { return b.no; }).filter(Boolean).join(', ');
-      if (kn) L.push(tLine(tCenter('Bons commande : ' + kn)));
-    }
-    L.push(TICKET_DASH);
-    // Articles
+    // 1. Identité
+    L.push(ctr('MUBASE'));
+    L.push(ctr('COFFEE, RESTAURANT & PATISSERIE'));
+    L.push('');
+    L.push(ctr('Goma, Himbi 2'));
+    L.push(ctr('Av. Felix Tshisekedi n82'));
+    L.push(ctr('+243 825 451 103'));
+    L.push(ctr('+243 979 373 663'));
+    L.push('');
+    // 2. Informations du reçu
+    L.push(ctr('REÇU N° ' + sale.receiptNo));
+    L.push(ctr(U.fmtDateTime(sale.date)));
+    L.push('');
+    // 3. Articles
+    L.push(pe('Qté', QW) + ' ' + pe('Désignation', DW) + ' ' + ps('P.U.', PW) + ' ' + ps('Total', TW));
+    L.push(new Array(W + 1).join('-'));
     sale.items.forEach(function (it) {
-      var label = it.qty + 'x ' + it.name;
-      if (it.note) label += '  (' + it.note + ')';
-      if (it.free) label += ' [INCLUS]';
-      // coupe propre si trop long
-      while (label.length > TICKET_W) {
-        L.push(tLine(label.substring(0, TICKET_W)));
-        label = '   ' + label.substring(TICKET_W);
-      }
-      L.push(tLine(label));
       var tu = Math.round(it.qty * it.unitUSD * 100) / 100;
-      L.push(tLine(tRow('  ' + U.fmtUSD(it.unitUSD), U.fmtFC(it.unitFC))));
-      L.push(tLine(tRow('  Total', U.fmtUSD(tu) + ' / ' + U.fmtFC(it.unitFC * it.qty))));
-      L.push(tBlank());
+      var name = it.name + (it.note ? ' (' + it.note + ')' : '') + (it.free ? ' [inclus]' : '');
+      var lines = wrapWords(name, DW);
+      L.push(itemRow(it.qty, lines[0], U.fmtUSD(it.unitUSD), U.fmtUSD(tu)));
+      for (var i = 1; i < lines.length; i++) {
+        L.push(pe('', QW) + ' ' + pe(lines[i], DW) + ' ' + ps('', PW) + ' ' + ps('', TW));
+      }
+      L.push('');
     });
-    L.push(TICKET_DASH);
-    // Totaux - montant mis en evidence
+    // 4. Total à payer — élément le plus visible
     if (sale.discountFC > 0) {
-      L.push(tLine(tRow('Remise', '-' + U.fmtFC(sale.discountFC) +
-        ' / -' + U.fmtUSD(sale.discountUSD || 0))));
+      L.push(row2('Remise', '-' + U.fmtFC(sale.discountFC) + ' (-' + U.fmtUSD(sale.discountUSD || 0) + ')'));
+      L.push('');
     }
-    L.push(tLine(tCenter('>>> TOTAL A PAYER <<<')));
-    L.push(tLine(tCenter(U.fmtFC(sale.totalFC))));
-    L.push(tLine(tCenter('(' + U.fmtUSD(sale.totalUSD) + ' US)')));
-    L.push(tLine('Taux applique : 1 $ = ' + Math.round(sale.rate) + ' FC'));
-    L.push(TICKET_DASH);
-    // Paiement
+    L.push(ctr('TOTAL À PAYER'));
+    L.push(ctr(U.fmtFC(sale.totalFC)));
+    L.push(ctr('(' + U.fmtUSD(sale.totalUSD) + ' US)'));
+    L.push('');
+    L.push(ctr('Taux : 1 $ = ' + Math.round(sale.rate) + ' FC'));
+    L.push('');
+    // 5. Paiement
     var p = sale.payment || {};
     var ml = { USD: 'USD', FC: 'Francs FC', MIXED: 'Mixte USD+FC' }[p.method] || p.method;
-    L.push(tLine('Paiement : ' + ml));
-    if (p.usdReceived) L.push(tLine(tRow('  Recu USD', U.fmtUSD(p.usdReceived))));
-    if (p.fcReceived) L.push(tLine(tRow('  Recu FC', U.fmtFC(p.fcReceived))));
-    L.push(tLine(tRow('  Monnaie USD', U.fmtUSD(p.usdChange || 0))));
-    L.push(tLine(tRow('  Monnaie FC', U.fmtFC(p.fcChange || 0))));
-    L.push(TICKET_DASH);
-    L.push(tLine(tCenter('Merci de votre visite !')));
+    L.push(row2('Paiement', ml));
+    if (p.usdReceived) L.push(row2('  Reçu USD', U.fmtUSD(p.usdReceived)));
+    if (p.fcReceived) L.push(row2('  Reçu FC', U.fmtFC(p.fcReceived)));
+    if (p.usdChange > 0) L.push(row2('  Monnaie USD', U.fmtUSD(p.usdChange)));
+    if (p.fcChange > 0) L.push(row2('  Monnaie FC', U.fmtFC(p.fcChange)));
+    if (!p.usdChange && !p.fcChange) L.push(row2('  Monnaie', 'aucune'));
+    L.push('');
+    // 6. Pied de page
+    L.push(ctr('Merci de votre visite !'));
     if (sale.status === 'cancelled') {
-      L.push(tLine(tCenter('*** VENTE ANNULEE ***')));
+      L.push(ctr('*** VENTE ANNULEE ***'));
     }
-    L.push(TICKET_BOT);
-    L.push(tBlank());
-    L.push(tBlank());
+    L.push('');
+    L.push('');
+    L.push('');
     return L.join('\n');
   };
 
