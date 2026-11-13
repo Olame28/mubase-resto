@@ -175,10 +175,8 @@
     if (sale.discountFC > 0) {
       L.push(row2('Remise', '-' + U.fmtFC(sale.discountFC) + ' (-' + U.fmtUSD(sale.discountUSD || 0) + ')'));
     }
-    L.push('');
-    L.push(dblHc('TOTAL À PAYER'));
+    L.push(bld(ctr('TOTAL À PAYER')));
     L.push(dblHc(U.fmtFC(sale.totalFC)));
-    L.push('');
     L.push(ctr('(' + U.fmtUSD(sale.totalUSD) + ' US)'));
     L.push(ctr('Taux : 1 $ = ' + Math.round(sale.rate) + ' FC'));
     L.push(sep());
