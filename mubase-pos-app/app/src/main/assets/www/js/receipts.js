@@ -95,7 +95,7 @@
   // Sections : identité / n° et date / articles en colonnes / TOTAL À PAYER /
   // paiement / merci. Pas de serveur, table ni référence cuisine (usage interne).
   R.buildReceiptText = function (sale) {
-    var W = 48;
+    var W = 42; // 42 colonnes : largeur sure pour imprimantes 80mm (48 fait deborder)
     function pe(t, w) { t = String(t); while (t.length < w) t += ' '; return t; }
     function ps(t, w) { t = String(t); while (t.length < w) t = ' ' + t; return t; }
     function ctr(t) {
@@ -118,8 +118,8 @@
       if (cur) lines.push(cur);
       return lines.length ? lines : [''];
     }
-    // Ligne article : Qté(3) + Désignation(22) + P.U.(10) + Total(10)
-    var QW = 3, DW = 22, PW = 10, TW = 10;
+    // Ligne article : Qté(3) + Désignation(18) + P.U.(9) + Total(9) = 42
+    var QW = 3, DW = 18, PW = 9, TW = 9;
     function itemRow(qty, name, pu, tot) {
       return pe(qty, QW) + ' ' + pe(name, DW) + ' ' + ps(pu, PW) + ' ' + ps(tot, TW);
     }
