@@ -14,9 +14,9 @@
   var U = window.MUBASE.Utils;
 
   var SYNC = {
-    // A REMPLIR apres creation du backend (voir docs/SYNC.md)
-    URL: '',          // ex: 'https://xxx.supabase.co/rest/v1/mubase_pos?id=eq.1'
-    API_KEY: '',      // cle API publique (anon) si requise
+    // Backend Supabase (projet MUBASE POS)
+    URL: 'https://lwgqkolimdyagscyxqxa.supabase.co/rest/v1/mubase_pos?id=eq.1',
+    API_KEY: 'sb_publishable_E_YHskT74bz3cFlmmvYE1Q_MYYr71SV',
     AUTO_MS: 60000,   // tentative de synchro toutes les 60 s
     _timer: null,
     _syncing: false
@@ -91,7 +91,11 @@
       xhr.onreadystatechange = function () {
         if (xhr.readyState === 4) {
           if (xhr.status >= 200 && xhr.status < 300) {
-            try { resolve(JSON.parse(xhr.responseText)); }
+            try {
+              var arr = JSON.parse(xhr.responseText);
+              // Format Supabase : [{ data: {...} }] -> on renvoie le contenu
+              resolve(arr && arr.length ? (arr[0].data || arr[0]) : null);
+            }
             catch (e) { reject(e); }
           } else if (xhr.status === 404) { resolve(null); }
           else { reject(new Error('HTTP ' + xhr.status)); }
@@ -120,7 +124,8 @@
         }
       };
       xhr.onerror = xhr.ontimeout = function () { reject(new Error('network')); };
-      xhr.send(JSON.stringify(data));
+      // Format Supabase : ligne id=1, colonne data
+      xhr.send(JSON.stringify({ id: 1, data: data }));
     });
   }
 
