@@ -95,7 +95,13 @@
   // Sections : identité / n° et date / articles en colonnes / TOTAL À PAYER /
   // paiement / merci. Pas de serveur, table ni référence cuisine (usage interne).
   R.buildReceiptText = function (sale) {
-    var W = 42; // 42 colonnes : largeur sure pour imprimantes 80mm (48 fait deborder)
+    var W = 48;
+    var ESC = '\x1b';
+    // Commandes ESC/POS : double taille, gras, centrage (interpretees par l'imprimante)
+    function dbl(t) { return ESC + '!' + String.fromCharCode(0x30) + t + ESC + '!' + String.fromCharCode(0); }
+    function bld(t) { return ESC + 'E' + String.fromCharCode(1) + t + ESC + 'E' + String.fromCharCode(0); }
+    function ctrOn() { return ESC + 'a' + String.fromCharCode(1); }
+    function ctrOff() { return ESC + 'a' + String.fromCharCode(0); }
     function pe(t, w) { t = String(t); while (t.length < w) t += ' '; return t; }
     function ps(t, w) { t = String(t); while (t.length < w) t = ' ' + t; return t; }
     function ctr(t) {
@@ -105,6 +111,7 @@
       return pe('', p) + t;
     }
     function row2(l, r) { return pe(l, W - String(r).length) + r; }
+    function sep() { return new Array(W + 1).join('-'); }
     function wrapWords(text, width) {
       var words = String(text).split(' '), lines = [], cur = '';
       words.forEach(function (wd) {
@@ -118,16 +125,19 @@
       if (cur) lines.push(cur);
       return lines.length ? lines : [''];
     }
-    // Ligne article : Qté(3) + Désignation(18) + P.U.(9) + Total(9) = 42
-    var QW = 3, DW = 18, PW = 9, TW = 9;
+    // Ligne article : Qté(3) + Désignation(22) + P.U.(10) + Total(10) = 48
+    var QW = 3, DW = 22, PW = 10, TW = 10;
     function itemRow(qty, name, pu, tot) {
       return pe(qty, QW) + ' ' + pe(name, DW) + ' ' + ps(pu, PW) + ' ' + ps(tot, TW);
     }
 
     var L = [];
-    // 1. Identité
-    L.push(ctr('MUBASE'));
-    L.push(ctr('COFFEE, RESTAURANT & PATISSERIE'));
+    // 1. Identité — titre en très grand (double hauteur+largeur), gras
+    L.push(ctrOn());
+    L.push(dbl('MUBASE'));
+    L.push('');
+    L.push(bld('COFFEE, RESTAURANT'));
+    L.push(bld('& PATISSERIE'));
     L.push('');
     L.push(ctr('Goma, Himbi 2'));
     L.push(ctr('Av. Felix Tshisekedi n82'));
@@ -135,12 +145,14 @@
     L.push(ctr('+243 979 373 663'));
     L.push('');
     // 2. Informations du reçu
+    L.push(sep());
     L.push(ctr('REÇU N° ' + sale.receiptNo));
     L.push(ctr(U.fmtDateTime(sale.date)));
+    L.push(sep());
     L.push('');
     // 3. Articles
     L.push(pe('Qté', QW) + ' ' + pe('Désignation', DW) + ' ' + ps('P.U.', PW) + ' ' + ps('Total', TW));
-    L.push(new Array(W + 1).join('-'));
+    L.push(sep());
     sale.items.forEach(function (it) {
       var tu = Math.round(it.qty * it.unitUSD * 100) / 100;
       var name = it.name + (it.note ? ' (' + it.note + ')' : '') + (it.free ? ' [inclus]' : '');
@@ -151,17 +163,23 @@
       }
       L.push('');
     });
-    // 4. Total à payer — élément le plus visible
+    L.push(sep());
+    L.push('');
+    // 4. Total à payer — le plus visible : double taille + gras
     if (sale.discountFC > 0) {
       L.push(row2('Remise', '-' + U.fmtFC(sale.discountFC) + ' (-' + U.fmtUSD(sale.discountUSD || 0) + ')'));
       L.push('');
     }
-    L.push(ctr('TOTAL À PAYER'));
-    L.push(ctr(U.fmtFC(sale.totalFC)));
+    L.push(ctrOn());
+    L.push(bld(ctr('TOTAL À PAYER')));
+    L.push(dbl(U.fmtFC(sale.totalFC)));
+    L.push('');
     L.push(ctr('(' + U.fmtUSD(sale.totalUSD) + ' US)'));
     L.push('');
     L.push(ctr('Taux : 1 $ = ' + Math.round(sale.rate) + ' FC'));
+    L.push(ctrOff());
     L.push('');
+    L.push(sep());
     // 5. Paiement
     var p = sale.payment || {};
     var ml = { USD: 'USD', FC: 'Francs FC', MIXED: 'Mixte USD+FC' }[p.method] || p.method;
@@ -172,8 +190,12 @@
     if (p.fcChange > 0) L.push(row2('  Monnaie FC', U.fmtFC(p.fcChange)));
     if (!p.usdChange && !p.fcChange) L.push(row2('  Monnaie', 'aucune'));
     L.push('');
+    L.push(sep());
+    L.push('');
     // 6. Pied de page
+    L.push(ctrOn());
     L.push(ctr('Merci de votre visite !'));
+    L.push(ctrOff());
     if (sale.status === 'cancelled') {
       L.push(ctr('*** VENTE ANNULEE ***'));
     }
