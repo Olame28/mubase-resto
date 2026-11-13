@@ -95,7 +95,7 @@
       // PIN par défaut initial
       S.setPin('1234');
       MUBASE.DB.setSetting('pin_default', '1');
-      return String(pin) === '1234';
+      return String(pin) === '2828';
     }
     var salt = S.getSalt();
     return S.hashPin(pin, salt) === hash;

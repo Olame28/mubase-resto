@@ -32,6 +32,13 @@
         if (s.rate == null) s.rate = C.DEFAULT_RATE;
         if (s.rounding == null) s.rounding = C.DEFAULT_ROUNDING;
         return MUBASE.DB.setSetting('settings', s);
+      }).then(function () {
+        // Migration unique : impose le PIN gerant 2828 une seule fois
+        if (!MUBASE.DB.getSettingSync('pin_v2')) {
+          return MUBASE.Security.setPin('2828').then(function () {
+            return MUBASE.DB.setSetting('pin_v2', '1');
+          });
+        }
       })
       .then(function () { return MUBASE.Products.seedIfEmpty(); })
       .then(function () { return MUBASE.DB.getProducts(); })
@@ -773,33 +780,71 @@
     setTimeout(function () { inp.focus(); }, 100);
   };
 
+  // Effacement selon la portee choisie : 'hour' | 'day' | 'all'
+  // Le menu (products) et les reglages (PIN, taux...) sont CONSERVES.
+  App.factoryReset = function (scope) {
+    var cutoff = scope === 'hour' ? Date.now() - 3600000
+              : scope === 'day'  ? Date.now() - 86400000 : 0;
+    function olderThan(ts) {
+      if (!cutoff) return true;
+      var t = new Date(ts || 0).getTime();
+      return isNaN(t) ? true : t < cutoff;
+    }
+    var chain = Promise.resolve();
+    chain = chain.then(function () { return MUBASE.DB.clear('carts'); });
+    ['sales', 'shifts', 'audit'].forEach(function (st) {
+      chain = chain.then(function () {
+        return MUBASE.DB.getAll(st).then(function (rows) {
+          var dels = [];
+          (rows || []).forEach(function (r) {
+            var ts = r.date || r.ts || r.time || r.createdAt || '';
+            if (olderThan(ts)) dels.push(MUBASE.DB.del(st, r.id || r.key));
+          });
+          return Promise.all(dels);
+        });
+      });
+    });
+    chain.then(function () {
+      U.toast('Donnees effacees. Le menu est conserve. Rechargement...', 'ok');
+      setTimeout(function () { location.reload(); }, 800);
+    });
+  };
+
   // Reinitialisation totale : PIN SEPARE du PIN gere (defaut 5678)
   App.openFactoryReset = function () {
     document.getElementById('resetModal').classList.remove('hidden');
     var inp = document.getElementById('resetPin');
     var err = document.getElementById('resetError');
-    function check() {
+    function _unusedCheck() {
       var pin = inp.value;
       // PIN reset stocke hache ou defaut '5678' au premier usage
       var hash = MUBASE.DB.getSettingSync('reset_pin_hash');
       var ok = hash ? MUBASE.Security.hashPin(pin, MUBASE.DB.getSettingSync('pin_salt')) === hash
-                    : String(pin) === '5678';
+                    : String(pin) === '28012000';
       if (!ok) { err.classList.remove('hidden'); inp.value = ''; return; }
       document.getElementById('resetModal').classList.add('hidden');
       // Efface uniquement les donnees transactionnelles :
       // ventes, commandes (paniers), clotures Z, journal d'audit.
       // Le menu (products) et les reglages (PIN, taux...) sont CONSERVES.
-      var stores = ['carts', 'sales', 'shifts', 'audit'];
-      var chain = Promise.resolve();
-      stores.forEach(function (st) {
-        chain = chain.then(function () { return MUBASE.DB.clear(st); });
-      });
-      chain.then(function () {
-        U.toast('Donnees effacees. Le menu est conserve. Rechargement...', 'ok');
-        setTimeout(function () { location.reload(); }, 800);
-      });
+      App.factoryReset('all');
     }
-    document.getElementById('btnResetOk').onclick = check;
+    function bindBtn(id, scope) {
+      var b = document.getElementById(id);
+      if (b) b.onclick = function () { doReset(scope); };
+    }
+    var btnOk = document.getElementById('btnResetOk');
+    function doReset(scope) {
+      var pin = document.getElementById('resetPin').value;
+      var hash = MUBASE.DB.getSettingSync('reset_pin_hash');
+      var ok = hash ? MUBASE.Security.hashPin(pin, MUBASE.DB.getSettingSync('pin_salt')) === hash
+                    : String(pin) === '28012000';
+      if (!ok) { document.getElementById('resetError').classList.remove('hidden'); document.getElementById('resetPin').value=''; return; }
+      document.getElementById('resetModal').classList.add('hidden');
+      App.factoryReset(scope);
+    }
+    if (btnOk) btnOk.onclick = function(){doReset('hour');};
+    bindBtn('btnReset24','day');
+    bindBtn('btnResetAll','all');
     document.getElementById('btnResetCancel').onclick = function () {
       document.getElementById('resetModal').classList.add('hidden');
     };
