@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MUBASE - Tableau de bord (boss)</title>
+<style>
+body{font-family:Arial,sans-serif;background:#0d1117;color:#eee;margin:0;padding:16px}
+h1{color:#f0a500;font-size:22px}
+.card{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:14px;margin:10px 0}
+table{width:100%;border-collapse:collapse;font-size:14px}
+td,th{padding:6px 8px;border-bottom:1px solid #30363d;text-align:left}
+input,button{padding:10px;font-size:15px;border-radius:6px;border:1px solid #30363d;background:#0d1117;color:#eee}
+button{background:#f0a500;color:#111;font-weight:700;cursor:pointer}
+.muted{color:#8b949e;font-size:13px}
+</style>
+</head>
+<body>
+<h1>MUBASE Coffee et Restaurant — Ventes</h1>
+<div class="card">
+  <p class="muted">Collez l'URL de synchronisation de la caisse (fournie par le technicien), puis Actualiser.</p>
+  <input id="url" style="width:70%" placeholder="https://...sync...">
+  <button onclick="load()">Actualiser</button>
+  <span id="status" class="muted"></span>
+</div>
+<div id="out"></div>
+<script>
+var URL_=localStorage.getItem('mubase_sync_url')||'';
+document.getElementById('url').value=URL_;
+function fmt(n){return (n||0).toLocaleString('fr-FR');}
+function load(){
+  URL_=document.getElementById('url').value.trim();
+  localStorage.setItem('mubase_sync_url',URL_);
+  var st=document.getElementById('status');st.textContent=' Chargement...';
+  fetch(URL_).then(function(r){return r.json()}).then(function(d){
+    var sales=d.sales||[], today=new Date().toISOString().slice(0,10);
+    var td=sales.filter(function(s){return (s.date||'').indexOf(today)===0 && s.status!=='cancelled';});
+    var tot=td.reduce(function(a,s){return a+(s.totalFC||0);},0);
+    var usd=td.reduce(function(a,s){return a+(s.totalUSD||0);},0);
+    var h='<div class="card"><h3>Aujourd\'hui ('+today+')</h3>'+
+      '<p><strong>'+td.length+'</strong> ventes — Total : <strong>'+fmt(tot)+' FC</strong> ('+usd.toFixed(2)+' $)</p></div>';
+    h+='<div class="card"><table><tr><th>Reçu</th><th>Heure</th><th>Table</th><th>Articles</th><th>Total FC</th><th>Paiement</th></tr>';
+    td.slice().reverse().forEach(function(s){
+      h+='<tr><td>'+s.receiptNo+'</td><td>'+(s.date||'').slice(11,16)+'</td><td>'+(s.tableName||'-')+'</td><td>'+(s.items||[]).length+'</td><td>'+fmt(s.totalFC)+'</td><td>'+((s.payment||{}).method||'-')+'</td></tr>';
+    });
+    document.getElementById('out').innerHTML=h+'</table></div>';
+    st.textContent=' Dernière synchro : '+(d.syncedAt||'-');
+  }).catch(function(e){st.textContent=' Erreur : '+e.message;});
+}
+if(URL_)load();
+setInterval(load,60000);
+</script>
+</body>
+</html>

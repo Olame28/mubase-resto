@@ -23,6 +23,7 @@
   /* ================= Initialisation ================= */
 
   App.init = function () {
+    if (window.MUBASE && MUBASE.Sync) { MUBASE.Sync.loadConfig(); MUBASE.Sync.init(); }
     MUBASE.DB.init()
       .then(function () { return MUBASE.DB.loadSettingsCache(); })
       .then(function () {
@@ -435,6 +436,7 @@
       state.lastSale = sale;
       MUBASE.Receipts.showReceipt(sale);
       App.refreshTablesUI();
+      if (window.MUBASE && MUBASE.Sync) MUBASE.Sync.now();
     });
   };
 
@@ -537,6 +539,7 @@
       U.promptText('Espèces comptées en caisse (FC)', 'Ex : 450000', function (cash) {
         if (cash === null) return;
         MUBASE.Settings.closeShift(cash).then(function (sum) {
+          if (window.MUBASE && MUBASE.Sync) MUBASE.Sync.now();
           var msg = 'Clôture Z : ' + sum.salesCount + ' ventes, ' +
             U.fmtUSD(sum.totalUSD) + ' / ' + U.fmtFC(sum.totalFC);
           if (sum.countedCashFC != null) {
