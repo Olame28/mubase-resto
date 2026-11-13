@@ -145,11 +145,8 @@
 
     var L = [];
     // 1. Identité — titre MUBASE très grand et très gras
-    L.push(fontA() + hero('MUBASE'));
+    L.push(fontA() + hero('M U B A S E'));
     L.push(bld(ctr('COFFEE, RESTAURANT & PATISSERIE')));
-    L.push('');
-    L.push(sep());
-    L.push('');
     L.push(ctr('Goma, Himbi 2'));
     L.push(ctr('Av. Felix Tshisekedi n82'));
     L.push(ctr('+243 825 451 103'));
@@ -178,8 +175,8 @@
       L.push(row2('Remise', '-' + U.fmtFC(sale.discountFC) + ' (-' + U.fmtUSD(sale.discountUSD || 0) + ')'));
     }
     L.push('');
-    L.push(bld(ctr('TOTAL À PAYER')));
-    L.push(dblHc(U.fmtFC(sale.totalFC)));
+    L.push(hero('TOTAL À PAYER'));
+    L.push(hero(U.fmtFC(sale.totalFC)));
     L.push('');
     L.push(ctr('(' + U.fmtUSD(sale.totalUSD) + ' US)'));
     L.push(ctr('Taux : 1 $ = ' + Math.round(sale.rate) + ' FC'));
