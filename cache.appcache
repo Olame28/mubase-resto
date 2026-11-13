@@ -1,7 +1,7 @@
 CACHE MANIFEST
 # MUBASE POS - cache hors ligne (AppCache, compatibilite Android 5.1)
 # INCREMENTER la version en debut de ligne a chaque publication
-# v15-2026-11-13
+# v16-2026-11-13
 
 CACHE:
 ./
