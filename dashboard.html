@@ -25,14 +25,15 @@ button{background:#f0a500;color:#111;font-weight:700;cursor:pointer}
 </div>
 <div id="out"></div>
 <script>
-var URL_=localStorage.getItem('mubase_sync_url')||'';
+var URL_=localStorage.getItem('mubase_sync_url')||'https://lwgqkolimdyagscyxqxa.supabase.co/rest/v1/mubase_pos?id=eq.1&select=data';
 document.getElementById('url').value=URL_;
 function fmt(n){return (n||0).toLocaleString('fr-FR');}
 function load(){
   URL_=document.getElementById('url').value.trim();
   localStorage.setItem('mubase_sync_url',URL_);
   var st=document.getElementById('status');st.textContent=' Chargement...';
-  fetch(URL_).then(function(r){return r.json()}).then(function(d){
+  fetch(URL_).then(function(r){return r.json()}).then(function(raw){
+    var d = Array.isArray(raw) ? (raw[0] && raw[0].data) || {} : raw;
     var sales=d.sales||[], today=new Date().toISOString().slice(0,10);
     var td=sales.filter(function(s){return (s.date||'').indexOf(today)===0 && s.status!=='cancelled';});
     var tot=td.reduce(function(a,s){return a+(s.totalFC||0);},0);
