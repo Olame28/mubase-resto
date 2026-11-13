@@ -786,10 +786,16 @@
                     : String(pin) === '5678';
       if (!ok) { err.classList.remove('hidden'); inp.value = ''; return; }
       document.getElementById('resetModal').classList.add('hidden');
-      MUBASE.DB.resetAll().then(function () {
-        return MUBASE.Products.seedIfEmpty();
-      }).then(function () {
-        U.toast('Application reinitialisee. Rechargement...', 'ok');
+      // Efface uniquement les donnees transactionnelles :
+      // ventes, commandes (paniers), clotures Z, journal d'audit.
+      // Le menu (products) et les reglages (PIN, taux...) sont CONSERVES.
+      var stores = ['carts', 'sales', 'shifts', 'audit'];
+      var chain = Promise.resolve();
+      stores.forEach(function (st) {
+        chain = chain.then(function () { return MUBASE.DB.clear(st); });
+      });
+      chain.then(function () {
+        U.toast('Donnees effacees. Le menu est conserve. Rechargement...', 'ok');
         setTimeout(function () { location.reload(); }, 800);
       });
     }
