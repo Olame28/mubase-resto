@@ -359,36 +359,64 @@
 
   // Génère le texte du bon de cuisine (envoyé à l'imprimante thermique
   // via l'app compagnon, ou affiché en aperçu). Pas de prix : cuisine only.
+  // Bon de commande cuisine : meme style epure que le recu client.
+  // Pas de prix. Articles + quantites + notes uniquement.
   R.buildKitchenTicketText = function (items, tableName, ticketNo) {
+    var W = 48;
+    var ESC = '';
+    function fontA() { return ESC + 'M' + String.fromCharCode(0); }
+    function dbl(t) { return ESC + '!' + String.fromCharCode(0x30) + t + ESC + '!' + String.fromCharCode(0); }
+    function bld(t) { return ESC + 'E' + String.fromCharCode(1) + t + ESC + 'E' + String.fromCharCode(0); }
+    function pe(t, w) { t = String(t); while (t.length < w) t += ' '; return t; }
+    function ctr(t) {
+      t = String(t);
+      if (t.length > W) t = t.substring(0, W);
+      return pe('', Math.floor((W - t.length) / 2)) + t;
+    }
+    function sep() { return new Array(W + 1).join('-'); }
+    function hero(t) {
+      var pad = Math.max(0, Math.floor((W - String(t).length * 2) / 2));
+      return pe('', pad) + bld(dbl(t));
+    }
+    function wrapWords(text, width) {
+      var words = String(text).split(' '), lines = [], cur = '';
+      words.forEach(function (wd) {
+        if ((cur + ' ' + wd).trim().length > width) {
+          if (cur) lines.push(cur);
+          cur = wd;
+        } else { cur = (cur ? cur + ' ' : '') + wd; }
+      });
+      if (cur) lines.push(cur);
+      return lines.length ? lines : [''];
+    }
+
     var L = [];
-    L.push(TICKET_SEP);
-    L.push(tLine(tCenter('MUBASE Coffee & Restaurant')));
-    L.push(tLine(tCenter('*** BON DE COMMANDE ***')));
-    L.push(tLine(tCenter(ticketNo || '')));
-    L.push(tLine(tCenter('Goma, Himbi 2')));
-    L.push(tLine(tCenter('Av. Felix Tshisekedi n82')));
-    L.push(tLine(tCenter('+243 825 451 103 / +243 979 373 663')));
-    L.push(TICKET_DASH);
-    L.push(tLine('Table : ' + (tableName || '-')));
-    L.push(tLine('Date  : ' + U.fmtDateTime(new Date())));
-    L.push(TICKET_DASH);
+    L.push(fontA() + hero('BON DE COMMANDE'));
+    L.push(bld(ctr('MUBASE Coffee & Restaurant')));
+    L.push('');
+    L.push(ctr('Table : ' + (tableName || '-')));
+    L.push(ctr(ticketNo || ''));
+    L.push(ctr(U.fmtDateTime(new Date())));
+    L.push(sep());
     items.forEach(function (it) {
-      var label = it.qty + 'x ' + it.name;
-      if (label.length > TICKET_W) label = label.substring(0, TICKET_W);
-      L.push(tLine(label));
+      var name = String(it.qty) + 'x ' + it.name;
+      var lines = wrapWords(name, W - 4);
+      L.push('  ' + pe(lines[0], W - 4));
+      for (var i = 1; i < lines.length; i++) L.push('     ' + pe(lines[i], W - 6));
       if (it.note) {
-        var n = '> ' + it.note;
-        if (n.length > TICKET_W) n = n.substring(0, TICKET_W);
-        L.push(tLine('   ' + n));
+        var nl = wrapWords('>> ' + it.note, W - 6);
+        nl.forEach(function (x) { L.push('     ' + pe(x, W - 6)); });
       }
+      L.push('');
     });
-    L.push(TICKET_BOT);
-    L.push(tBlank());
-    L.push(tBlank());
+    L.push(sep());
+    L.push('');
+    L.push('');
+    L.push('');
+    L.push('');
     return L.join('\n');
   };
 
-  // Génère le HTML d'aperçu du bon de cuisine (secours si pas d'imprimante)
   R.buildKitchenTicketHTML = function (items, tableName) {
     var h = [];
     h.push('<div class="receipt-print">');

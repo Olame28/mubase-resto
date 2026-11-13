@@ -28,8 +28,8 @@
     <span id="tableBadge" class="badge badge-table">-</span>
   </div>
   <nav class="topbar-actions">
-    <button id="btnMenu" class="btn btn-nav">Menu</button>
-    <button id="btnTables" class="btn btn-nav">Tables</button>
+    <button id="btnMenu" class="btn btn-nav" style="display:none">Menu</button>
+    <button id="btnTables" class="btn btn-nav" style="display:none">Tables</button>
     <button id="btnReports" class="btn btn-nav">Rapports</button>
     <button id="btnSettings" class="btn btn-nav">Paramètres</button>
     <button id="btnLock" class="btn btn-nav">Verrouiller</button>
@@ -49,7 +49,7 @@
     <aside id="cartPanel" class="cart-panel">
       <div class="cart-header">
         <h2>Commande</h2>
-        <select id="tableSelect" class="table-select"></select>
+        <select id="tableSelect" class="table-select" style="display:none"></select>
       </div>
       <div id="cartItems" class="cart-items"></div>
       <div id="cartEmpty" class="cart-empty">Aucun article.<br>Choisissez une table puis ajoutez des produits.</div>
@@ -64,7 +64,7 @@
         </div>
         <div class="cart-actions">
           <button id="btnClearCart" class="btn btn-danger">Vider</button>
-          <button id="btnTransfer" class="btn">Transférer</button>
+          <button id="btnTransfer" class="btn" style="display:none">Transférer</button>
           <button id="btnCheckout" class="btn btn-primary btn-big">Encaisser</button>
         </div>
       </div>
@@ -206,6 +206,7 @@
     <div id="tabBackup" class="settings-pane hidden">
       <p class="backup-info">Dernière sauvegarde : <span id="lastBackup">jamais</span></p>
       <div class="backup-actions">
+        <button id="btnFactoryReset" class="btn btn-danger">Réinitialisation totale (PIN séparé)</button>
         <button id="btnExportJson" class="btn btn-primary">Exporter (JSON)</button>
         <button id="btnImportJson" class="btn">Importer (JSON)</button>
         <input type="file" id="importFile" accept=".json,application/json" class="hidden">
@@ -267,5 +268,26 @@
 <script src="js/backup.js"></script>
 <script src="js/sync.js"></script>
 <script src="js/app.js"></script>
+<!-- Ecran de verrouillage demarrage -->
+<div id="lockScreen" class="modal">
+  <div class="modal-content" style="max-width:340px">
+    <h3>MUBASE POS</h3>
+    <p class="muted">Entrez le PIN pour ouvrir la caisse</p>
+    <input id="lockPin" type="password" inputmode="numeric" maxlength="8" placeholder="PIN" style="width:100%;padding:14px;font-size:22px;text-align:center;letter-spacing:6px">
+    <div id="lockError" class="pin-error hidden">PIN incorrect.</div>
+    <button id="btnLockOk" class="btn btn-primary" style="width:100%;margin-top:10px">Ouvrir</button>
+  </div>
+</div>
+<!-- Modale reset PIN -->
+<div id="resetModal" class="modal hidden">
+  <div class="modal-content" style="max-width:340px">
+    <h3>Réinitialisation totale</h3>
+    <p class="muted">Efface TOUTES les données (ventes, articles, réglages). Entrez le PIN de réinitialisation.</p>
+    <input id="resetPin" type="password" inputmode="numeric" maxlength="8" placeholder="PIN reset" style="width:100%;padding:14px;font-size:22px;text-align:center;letter-spacing:6px">
+    <div id="resetError" class="pin-error hidden">PIN incorrect.</div>
+    <button id="btnResetOk" class="btn btn-danger" style="width:100%;margin-top:10px">Tout effacer et recommencer</button>
+    <button id="btnResetCancel" class="btn" style="width:100%;margin-top:8px">Annuler</button>
+  </div>
+</div>
 </body>
 </html>

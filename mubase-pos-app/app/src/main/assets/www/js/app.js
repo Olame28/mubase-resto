@@ -54,6 +54,7 @@
         App.bindEvents();
         App.addCancelButton();
         App.registerSW();
+    App.showLock();
         App.watchOnline();
         if (MUBASE.Security.isDefaultPin()) {
           U.toast('PIN gérant par défaut (1234) : changez-le dans Paramètres.', 'error');
@@ -749,6 +750,56 @@
 
   /* ================= Événements ================= */
 
+  // Verrouillage au demarrage : PIN gere requis pour ouvrir la caisse
+  App.showLock = function () {
+    var scr = document.getElementById('lockScreen');
+    if (!scr) return;
+    scr.classList.remove('hidden');
+    var inp = document.getElementById('lockPin');
+    var err = document.getElementById('lockError');
+    function tryOpen() {
+      var pin = inp.value;
+      if (MUBASE.Security.verifyPin(pin)) {
+        scr.classList.add('hidden');
+        inp.value = '';
+      } else {
+        err.classList.remove('hidden');
+        inp.value = '';
+        inp.focus();
+      }
+    }
+    document.getElementById('btnLockOk').onclick = tryOpen;
+    inp.onkeydown = function (e) { if (e.key === 'Enter') tryOpen(); };
+    setTimeout(function () { inp.focus(); }, 100);
+  };
+
+  // Reinitialisation totale : PIN SEPARE du PIN gere (defaut 5678)
+  App.openFactoryReset = function () {
+    document.getElementById('resetModal').classList.remove('hidden');
+    var inp = document.getElementById('resetPin');
+    var err = document.getElementById('resetError');
+    function check() {
+      var pin = inp.value;
+      // PIN reset stocke hache ou defaut '5678' au premier usage
+      var hash = MUBASE.DB.getSettingSync('reset_pin_hash');
+      var ok = hash ? MUBASE.Security.hashPin(pin, MUBASE.DB.getSettingSync('pin_salt')) === hash
+                    : String(pin) === '5678';
+      if (!ok) { err.classList.remove('hidden'); inp.value = ''; return; }
+      document.getElementById('resetModal').classList.add('hidden');
+      MUBASE.DB.resetAll().then(function () {
+        return MUBASE.Products.seedIfEmpty();
+      }).then(function () {
+        U.toast('Application reinitialisee. Rechargement...', 'ok');
+        setTimeout(function () { location.reload(); }, 800);
+      });
+    }
+    document.getElementById('btnResetOk').onclick = check;
+    document.getElementById('btnResetCancel').onclick = function () {
+      document.getElementById('resetModal').classList.add('hidden');
+    };
+    setTimeout(function () { inp.focus(); }, 100);
+  };
+
   App.bindEvents = function () {
     // Recherche
     document.getElementById('searchInput').oninput = function () {
@@ -841,6 +892,8 @@
       document.getElementById('productEditForm').classList.add('hidden');
     };
     document.getElementById('btnPeSave').onclick = App.saveProduct;
+    var bfr = document.getElementById('btnFactoryReset');
+    if (bfr) bfr.onclick = App.openFactoryReset;
     // Sauvegarde
     document.getElementById('btnExportJson').onclick = function () { MUBASE.Backup.exportJson(); };
     document.getElementById('btnExportCsv').onclick = function () { MUBASE.Backup.exportCsv(); };
