@@ -108,10 +108,19 @@
       if (t.length > W) t = t.substring(0, W);
       return pe('', Math.floor((W - t.length) / 2)) + t;
     }
-    // Texte tres grand, centre (double hauteur+largeur)
+    // Texte tres grand et gras, centre (double hauteur+largeur + gras)
     function hero(t) {
       var pad = Math.max(0, Math.floor((W - String(t).length * 2) / 2));
-      return pe('', pad) + dbl(t);
+      return pe('', pad) + bld(dbl(t));
+    }
+    // Double hauteur seule (plus discret que hero)
+    function dblH(t) {
+      return ESC + '!' + String.fromCharCode(0x10) + t + ESC + '!' + String.fromCharCode(0);
+    }
+    // Double hauteur centree
+    function dblHc(t) {
+      var pad = Math.max(0, Math.floor((W - String(t).length) / 2));
+      return pe('', pad) + bld(dblH(t));
     }
     function row2(l, r) { return pe(l, W - String(r).length) + r; }
     function sep() { return new Array(W + 1).join('-'); }
@@ -138,6 +147,9 @@
     // 1. Identité — titre MUBASE très grand et très gras
     L.push(fontA() + hero('MUBASE'));
     L.push(bld(ctr('COFFEE, RESTAURANT & PATISSERIE')));
+    L.push('');
+    L.push(sep());
+    L.push('');
     L.push(ctr('Goma, Himbi 2'));
     L.push(ctr('Av. Felix Tshisekedi n82'));
     L.push(ctr('+243 825 451 103'));
@@ -148,7 +160,7 @@
     L.push(ctr(U.fmtDateTime(sale.date)));
     L.push(sep());
     // 3. Articles
-    L.push(pe('Qté', QW) + ' ' + pe('Désignation', DW) + ' ' + ps('P.U.', PW) + ' ' + ps('Total', TW));
+    L.push(bld(pe('Qté', QW) + ' ' + pe('Désignation', DW) + ' ' + ps('P.U.', PW) + ' ' + ps('Total', TW)));
     L.push(sep());
     sale.items.forEach(function (it) {
       var tu = Math.round(it.qty * it.unitUSD * 100) / 100;
@@ -167,7 +179,7 @@
     }
     L.push('');
     L.push(bld(ctr('TOTAL À PAYER')));
-    L.push(hero(U.fmtFC(sale.totalFC)));
+    L.push(dblHc(U.fmtFC(sale.totalFC)));
     L.push('');
     L.push(ctr('(' + U.fmtUSD(sale.totalUSD) + ' US)'));
     L.push(ctr('Taux : 1 $ = ' + Math.round(sale.rate) + ' FC'));
@@ -188,6 +200,9 @@
     if (sale.status === 'cancelled') {
       L.push(ctr('*** VENTE ANNULEE ***'));
     }
+    L.push('');
+    L.push('');
+    L.push('');
     L.push('');
     return L.join('\n');
   };
