@@ -100,7 +100,6 @@
     // ESC/POS : Font A, double hauteur+largeur, gras, double frappe
     function fontA() { return ESC + 'M' + String.fromCharCode(0); }
     function dbl(t) { return ESC + '!' + String.fromCharCode(0x30) + t + ESC + '!' + String.fromCharCode(0); }
-    function fat(t) { return ESC + 'G' + t + ESC + 'H'; }          // double frappe = plus gras
     function bld(t) { return ESC + 'E' + String.fromCharCode(1) + t + ESC + 'E' + String.fromCharCode(0); }
     function pe(t, w) { t = String(t); while (t.length < w) t += ' '; return t; }
     function ps(t, w) { t = String(t); while (t.length < w) t = ' ' + t; return t; }
@@ -109,10 +108,10 @@
       if (t.length > W) t = t.substring(0, W);
       return pe('', Math.floor((W - t.length) / 2)) + t;
     }
-    // Texte tres grand et tres gras, centre (double frappe + double taille)
+    // Texte tres grand, centre (double hauteur+largeur)
     function hero(t) {
       var pad = Math.max(0, Math.floor((W - String(t).length * 2) / 2));
-      return pe('', pad) + fat(dbl(t));
+      return pe('', pad) + dbl(t);
     }
     function row2(l, r) { return pe(l, W - String(r).length) + r; }
     function sep() { return new Array(W + 1).join('-'); }
