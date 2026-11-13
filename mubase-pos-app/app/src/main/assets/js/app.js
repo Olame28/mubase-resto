@@ -353,9 +353,9 @@
     document.getElementById('payDetails').classList.add('hidden');
     document.getElementById('payDetails').innerHTML = '';
     document.getElementById('btnPayConfirm').disabled = true;
-    var methods = document.querySelectorAll('.btn-method');
-    for (var i = 0; i < methods.length; i++) methods[i].classList.remove('selected');
     document.getElementById('payModal').classList.remove('hidden');
+    // Methode de paiement detectee automatiquement selon les montants saisis
+    App.selectPayMethod('MIXED', document.createElement('button'));
   };
 
   App.selectPayMethod = function (method, btn) {
@@ -385,7 +385,7 @@
 
     function liveCheck() {
       var input = {
-        method: method,
+        method: App.detectPayMethod(usdIn ? usdIn.value : 0, fcIn ? fcIn.value : 0),
         discountFC: dIn ? dIn.value : 0,
         usdReceived: usdIn ? usdIn.value : 0,
         fcReceived: fcIn ? fcIn.value : 0
@@ -406,20 +406,26 @@
     if (usdIn) usdIn.oninput = liveCheck;
     if (fcIn) fcIn.oninput = liveCheck;
     if (dIn) dIn.oninput = liveCheck;
-    // Pré-remplit avec le total exact pour faciliter
-    if (usdIn) usdIn.value = t.usd;
+    // Pré-remplit FC par défaut (devise principale) ; USD reste vide
     if (fcIn) fcIn.value = t.fc;
     liveCheck();
   };
 
+  // Detecte la methode : USD seul, FC seul, ou mixte
+  App.detectPayMethod = function (usd, fc) {
+    var u = parseFloat(usd) || 0, f = parseInt(fc, 10) || 0;
+    if (u > 0 && f > 0) return 'MIXED';
+    if (u > 0) return 'USD';
+    return 'FC';
+  };
+
   App.confirmPayment = function () {
-    if (!state.payMethod) return;
     var dIn = document.getElementById('payDiscount');
     var usdIn = document.getElementById('payUsd');
     var fcIn = document.getElementById('payFc');
     var t = O.cartTotals();
     var input = {
-      method: state.payMethod,
+      method: App.detectPayMethod(usdIn ? usdIn.value : 0, fcIn ? fcIn.value : 0),
       discountFC: dIn ? dIn.value : 0,
       usdReceived: usdIn ? usdIn.value : 0,
       fcReceived: fcIn ? fcIn.value : 0
