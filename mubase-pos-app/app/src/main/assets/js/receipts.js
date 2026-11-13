@@ -97,21 +97,22 @@
   R.buildReceiptText = function (sale) {
     var W = 48;
     var ESC = '';
-    // ESC/POS : double hauteur+largeur et gras (interpretes par l'imprimante)
+    // ESC/POS : Font A, double hauteur+largeur, gras, double frappe
+    function fontA() { return ESC + 'M' + String.fromCharCode(0); }
     function dbl(t) { return ESC + '!' + String.fromCharCode(0x30) + t + ESC + '!' + String.fromCharCode(0); }
+    function fat(t) { return ESC + 'G' + t + ESC + 'H'; }          // double frappe = plus gras
     function bld(t) { return ESC + 'E' + String.fromCharCode(1) + t + ESC + 'E' + String.fromCharCode(0); }
     function pe(t, w) { t = String(t); while (t.length < w) t += ' '; return t; }
     function ps(t, w) { t = String(t); while (t.length < w) t = ' ' + t; return t; }
-    // Centrage manuel (largeur visible = nb de caracteres)
     function ctr(t) {
       t = String(t);
       if (t.length > W) t = t.substring(0, W);
       return pe('', Math.floor((W - t.length) / 2)) + t;
     }
-    // Centrage d'un texte en double largeur (occupe 2x sa longueur)
-    function dblc(t) {
+    // Texte tres grand et tres gras, centre (double frappe + double taille)
+    function hero(t) {
       var pad = Math.max(0, Math.floor((W - String(t).length * 2) / 2));
-      return pe('', pad) + dbl(t);
+      return pe('', pad) + fat(dbl(t));
     }
     function row2(l, r) { return pe(l, W - String(r).length) + r; }
     function sep() { return new Array(W + 1).join('-'); }
@@ -135,10 +136,9 @@
     }
 
     var L = [];
-    // 1. Identité — titre MUBASE en très grand, sous-titre en gras
-    L.push(dblc('MUBASE'));
+    // 1. Identité — titre MUBASE très grand et très gras
+    L.push(fontA() + hero('MUBASE'));
     L.push(bld(ctr('COFFEE, RESTAURANT & PATISSERIE')));
-    L.push('');
     L.push(ctr('Goma, Himbi 2'));
     L.push(ctr('Av. Felix Tshisekedi n82'));
     L.push(ctr('+243 825 451 103'));
@@ -162,13 +162,13 @@
       L.push('');
     });
     L.push(sep());
-    // 4. Total à payer — le plus visible : gras + double taille
+    // 4. Total à payer — harmonisé : libellé gras + montant très grand et gras
     if (sale.discountFC > 0) {
       L.push(row2('Remise', '-' + U.fmtFC(sale.discountFC) + ' (-' + U.fmtUSD(sale.discountUSD || 0) + ')'));
     }
     L.push('');
     L.push(bld(ctr('TOTAL À PAYER')));
-    L.push(dblc(U.fmtFC(sale.totalFC)));
+    L.push(hero(U.fmtFC(sale.totalFC)));
     L.push('');
     L.push(ctr('(' + U.fmtUSD(sale.totalUSD) + ' US)'));
     L.push(ctr('Taux : 1 $ = ' + Math.round(sale.rate) + ' FC'));
@@ -185,11 +185,10 @@
     L.push(sep());
     // 6. Pied de page
     L.push('');
-    L.push(bld(ctr('Merci de votre visite !')));
+    L.push(bld(ctr('Merci de votre visite, revenez demain !')));
     if (sale.status === 'cancelled') {
       L.push(ctr('*** VENTE ANNULEE ***'));
     }
-    L.push('');
     L.push('');
     return L.join('\n');
   };
