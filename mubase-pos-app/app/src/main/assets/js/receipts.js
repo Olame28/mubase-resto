@@ -96,19 +96,22 @@
   // paiement / merci. Pas de serveur, table ni référence cuisine (usage interne).
   R.buildReceiptText = function (sale) {
     var W = 48;
-    var ESC = '\x1b';
-    // Commandes ESC/POS : double taille, gras, centrage (interpretees par l'imprimante)
+    var ESC = '';
+    // ESC/POS : double hauteur+largeur et gras (interpretes par l'imprimante)
     function dbl(t) { return ESC + '!' + String.fromCharCode(0x30) + t + ESC + '!' + String.fromCharCode(0); }
     function bld(t) { return ESC + 'E' + String.fromCharCode(1) + t + ESC + 'E' + String.fromCharCode(0); }
-    function ctrOn() { return ESC + 'a' + String.fromCharCode(1); }
-    function ctrOff() { return ESC + 'a' + String.fromCharCode(0); }
     function pe(t, w) { t = String(t); while (t.length < w) t += ' '; return t; }
     function ps(t, w) { t = String(t); while (t.length < w) t = ' ' + t; return t; }
+    // Centrage manuel (largeur visible = nb de caracteres)
     function ctr(t) {
       t = String(t);
       if (t.length > W) t = t.substring(0, W);
-      var p = Math.floor((W - t.length) / 2);
-      return pe('', p) + t;
+      return pe('', Math.floor((W - t.length) / 2)) + t;
+    }
+    // Centrage d'un texte en double largeur (occupe 2x sa longueur)
+    function dblc(t) {
+      var pad = Math.max(0, Math.floor((W - String(t).length * 2) / 2));
+      return pe('', pad) + dbl(t);
     }
     function row2(l, r) { return pe(l, W - String(r).length) + r; }
     function sep() { return new Array(W + 1).join('-'); }
@@ -132,24 +135,19 @@
     }
 
     var L = [];
-    // 1. Identité — titre en très grand (double hauteur+largeur), gras
-    L.push(ctrOn());
-    L.push(dbl('MUBASE'));
-    L.push('');
-    L.push(bld('COFFEE, RESTAURANT'));
-    L.push(bld('& PATISSERIE'));
+    // 1. Identité — titre MUBASE en très grand, sous-titre en gras
+    L.push(dblc('MUBASE'));
+    L.push(bld(ctr('COFFEE, RESTAURANT & PATISSERIE')));
     L.push('');
     L.push(ctr('Goma, Himbi 2'));
     L.push(ctr('Av. Felix Tshisekedi n82'));
     L.push(ctr('+243 825 451 103'));
     L.push(ctr('+243 979 373 663'));
-    L.push('');
-    // 2. Informations du reçu
     L.push(sep());
+    // 2. Informations du reçu
     L.push(ctr('REÇU N° ' + sale.receiptNo));
     L.push(ctr(U.fmtDateTime(sale.date)));
     L.push(sep());
-    L.push('');
     // 3. Articles
     L.push(pe('Qté', QW) + ' ' + pe('Désignation', DW) + ' ' + ps('P.U.', PW) + ' ' + ps('Total', TW));
     L.push(sep());
@@ -164,21 +162,16 @@
       L.push('');
     });
     L.push(sep());
-    L.push('');
-    // 4. Total à payer — le plus visible : double taille + gras
+    // 4. Total à payer — le plus visible : gras + double taille
     if (sale.discountFC > 0) {
       L.push(row2('Remise', '-' + U.fmtFC(sale.discountFC) + ' (-' + U.fmtUSD(sale.discountUSD || 0) + ')'));
-      L.push('');
     }
-    L.push(ctrOn());
+    L.push('');
     L.push(bld(ctr('TOTAL À PAYER')));
-    L.push(dbl(U.fmtFC(sale.totalFC)));
+    L.push(dblc(U.fmtFC(sale.totalFC)));
     L.push('');
     L.push(ctr('(' + U.fmtUSD(sale.totalUSD) + ' US)'));
-    L.push('');
     L.push(ctr('Taux : 1 $ = ' + Math.round(sale.rate) + ' FC'));
-    L.push(ctrOff());
-    L.push('');
     L.push(sep());
     // 5. Paiement
     var p = sale.payment || {};
@@ -189,17 +182,13 @@
     if (p.usdChange > 0) L.push(row2('  Monnaie USD', U.fmtUSD(p.usdChange)));
     if (p.fcChange > 0) L.push(row2('  Monnaie FC', U.fmtFC(p.fcChange)));
     if (!p.usdChange && !p.fcChange) L.push(row2('  Monnaie', 'aucune'));
-    L.push('');
     L.push(sep());
-    L.push('');
     // 6. Pied de page
-    L.push(ctrOn());
-    L.push(ctr('Merci de votre visite !'));
-    L.push(ctrOff());
+    L.push('');
+    L.push(bld(ctr('Merci de votre visite !')));
     if (sale.status === 'cancelled') {
       L.push(ctr('*** VENTE ANNULEE ***'));
     }
-    L.push('');
     L.push('');
     L.push('');
     return L.join('\n');
