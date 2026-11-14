@@ -7,21 +7,22 @@
 
   var O = {};
 
-  O.TABLES = [
-    { id: 't1', name: 'Table 1' },
-    { id: 't2', name: 'Table 2' },
-    { id: 't3', name: 'Table 3' },
-    { id: 't4', name: 'Table 4' },
-    { id: 't5', name: 'Table 5' },
-    { id: 't6', name: 'Table 6' },
-    { id: 'vip', name: 'VIP' },
-    { id: 'counter', name: 'Comptoir' }
-  ];
+  O.TABLES = [];
+  for (var ti = 1; ti <= 15; ti++) {
+    O.TABLES.push({ id: 't' + ti, name: 'Table ' + ti });
+  }
 
   // État courant
   O.currentTableId = null;
+  O.customName = null; // nom libre de la commande (ex. "Famille Dupont")
+  O.pendingNames = {}; // noms choisis sur tables encore vides
   O.cart = []; // [{productId,name,qty,note,unitUSD,unitFC}]
   O.cartLoadedFor = null;
+
+  // Libellé affiché : nom personnalisé si défini, sinon la table
+  O.orderLabel = function () {
+    return O.customName || O.tableName(O.currentTableId);
+  };
 
   O.tableName = function (id) {
     for (var i = 0; i < O.TABLES.length; i++) {
@@ -43,6 +44,7 @@
       O.currentTableId = tableId;
       O.cart = (cart && cart.items) ? cart.items.slice() : [];
       O.kitchenBatches = (cart && cart.kitchenBatches) ? cart.kitchenBatches.slice() : [];
+      O.customName = (cart && cart.customName) ? cart.customName : (O.pendingNames[tableId] || null);
       O.cartLoadedFor = tableId;
       if (MUBASE.App) MUBASE.App.refreshCartUI();
       if (MUBASE.App) MUBASE.App.refreshTablesUI();
@@ -60,6 +62,7 @@
       tableId: O.currentTableId,
       items: O.cart,
       kitchenBatches: O.kitchenBatches || [],
+      customName: O.customName || '',
       updatedAt: new Date().toISOString()
     });
   };
@@ -220,7 +223,7 @@
       receiptNo: receiptNo,
       date: new Date().toISOString(),
       tableId: O.currentTableId,
-      tableName: O.tableName(O.currentTableId),
+      tableName: O.orderLabel(),
       server: MUBASE.Settings.getServerName(),
       rate: C.getRate(),
       items: O.cart.map(function (it) {
@@ -244,8 +247,25 @@
     };
   };
 
+  // Nomme (ou renomme) la commande courante. Nom vide = retour au nom de table.
+  O.setOrderName = function (name) {
+    name = (name || '').trim();
+    O.customName = name || null;
+    if (O.currentTableId) {
+      if (name) O.pendingNames[O.currentTableId] = name;
+      else delete O.pendingNames[O.currentTableId];
+    }
+    O.saveCart();
+    if (MUBASE.App) {
+      MUBASE.App.refreshCartUI();
+      MUBASE.App.refreshTablesUI();
+    }
+  };
+
   // Vide le panier après encaissement confirmé
   O.clearCart = function () {
+    if (O.currentTableId) delete O.pendingNames[O.currentTableId];
+    O.customName = null;
     O.cart = [];
     O.kitchenBatches = [];
     return O.saveCart().then(function () {

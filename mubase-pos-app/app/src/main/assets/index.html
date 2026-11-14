@@ -29,7 +29,7 @@
   </div>
   <nav class="topbar-actions">
     <button id="btnMenu" class="btn btn-nav" style="display:none">Menu</button>
-    <button id="btnTables" class="btn btn-nav" style="display:none">Tables</button>
+    <button id="btnTables" class="btn btn-nav">Commandes</button>
     <button id="btnReports" class="btn btn-nav">Rapports</button>
     <button id="btnSettings" class="btn btn-nav">Paramètres</button>
     <button id="btnLock" class="btn btn-nav">Verrouiller</button>
@@ -49,10 +49,11 @@
     <aside id="cartPanel" class="cart-panel">
       <div class="cart-header">
         <h2>Commande</h2>
+        <button id="btnOrderName" class="btn btn-sm" title="Nommer la commande">Nommer</button>
         <select id="tableSelect" class="table-select" style="display:none"></select>
       </div>
       <div id="cartItems" class="cart-items"></div>
-      <div id="cartEmpty" class="cart-empty">Aucun article.<br>Choisissez une table puis ajoutez des produits.</div>
+      <div id="cartEmpty" class="cart-empty">Aucun article.<br>Ouvrez une commande dans « Commandes » puis ajoutez des produits.</div>
       <div class="cart-footer">
         <div class="cart-totals">
           <div class="total-line"><span>Total USD</span><strong id="totalUSD">0.00 $</strong></div>
@@ -73,7 +74,8 @@
 
   <!-- Vue tables -->
   <section id="tablesView" class="view">
-    <h2 class="view-title">Tables du restaurant</h2>
+    <h2 class="view-title">Commandes ouvertes</h2>
+    <p class="view-subtitle">Touchez une table pour ouvrir sa commande. Le crayon ✎ permet de lui donner un nom (ex. « Famille Dupont »).</p>
     <div id="tablesGrid" class="tables-grid"></div>
   </section>
 </main>
@@ -97,7 +99,7 @@
   <div class="modal-box pay-box">
     <h3>Encaissement</h3>
     <div id="paySummary" class="pay-summary"></div>
-    <div class="pay-methods">
+    <div class="pay-methods" style="display:none">
       <button class="btn btn-method" data-method="USD">Paiement USD</button>
       <button class="btn btn-method" data-method="FC">Paiement FC</button>
       <button class="btn btn-method" data-method="MIXED">Paiement mixte</button>
@@ -285,7 +287,9 @@
     <p class="muted">Efface TOUTES les données (ventes, articles, réglages). Entrez le PIN de réinitialisation.</p>
     <input id="resetPin" type="password" inputmode="numeric" maxlength="8" placeholder="PIN reset" style="width:100%;padding:14px;font-size:22px;text-align:center;letter-spacing:6px">
     <div id="resetError" class="pin-error hidden">PIN incorrect.</div>
-    <button id="btnResetOk" class="btn btn-danger" style="width:100%;margin-top:10px">Tout effacer et recommencer</button>
+    <button id="btnResetOk" class="btn btn-danger" style="width:100%;margin-top:10px">Effacer les donnees de + 1 heure</button>
+    <button id="btnReset24" class="btn btn-danger" style="width:100%;margin-top:8px">Effacer les donnees de + 24 heures</button>
+    <button id="btnResetAll" class="btn btn-danger" style="width:100%;margin-top:8px">Tout effacer (on repart a zero)</button>
     <button id="btnResetCancel" class="btn" style="width:100%;margin-top:8px">Annuler</button>
   </div>
 </div>

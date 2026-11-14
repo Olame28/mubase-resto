@@ -29,7 +29,7 @@
   </div>
   <nav class="topbar-actions">
     <button id="btnMenu" class="btn btn-nav" style="display:none">Menu</button>
-    <button id="btnTables" class="btn btn-nav" style="display:none">Tables</button>
+    <button id="btnTables" class="btn btn-nav">Commandes</button>
     <button id="btnReports" class="btn btn-nav">Rapports</button>
     <button id="btnSettings" class="btn btn-nav">Paramètres</button>
     <button id="btnLock" class="btn btn-nav">Verrouiller</button>
@@ -49,10 +49,11 @@
     <aside id="cartPanel" class="cart-panel">
       <div class="cart-header">
         <h2>Commande</h2>
+        <button id="btnOrderName" class="btn btn-sm" title="Nommer la commande">Nommer</button>
         <select id="tableSelect" class="table-select" style="display:none"></select>
       </div>
       <div id="cartItems" class="cart-items"></div>
-      <div id="cartEmpty" class="cart-empty">Aucun article.<br>Choisissez une table puis ajoutez des produits.</div>
+      <div id="cartEmpty" class="cart-empty">Aucun article.<br>Ouvrez une commande dans « Commandes » puis ajoutez des produits.</div>
       <div class="cart-footer">
         <div class="cart-totals">
           <div class="total-line"><span>Total USD</span><strong id="totalUSD">0.00 $</strong></div>
@@ -73,7 +74,8 @@
 
   <!-- Vue tables -->
   <section id="tablesView" class="view">
-    <h2 class="view-title">Tables du restaurant</h2>
+    <h2 class="view-title">Commandes ouvertes</h2>
+    <p class="view-subtitle">Touchez une table pour ouvrir sa commande. Le crayon ✎ permet de lui donner un nom (ex. « Famille Dupont »).</p>
     <div id="tablesGrid" class="tables-grid"></div>
   </section>
 </main>

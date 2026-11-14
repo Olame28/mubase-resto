@@ -250,6 +250,18 @@ html, body {
 .table-name { font-size: 20px; font-weight: 800; }
 .table-status { font-size: 13px; color: var(--muted); }
 .table-card.occupied .table-status { color: var(--accent); font-weight: 700; }
+.table-rename {
+  position: absolute;
+  top: 6px; right: 6px;
+  background: none; border: none;
+  color: var(--muted); font-size: 15px;
+  padding: 4px 6px; cursor: pointer;
+}
+.table-card { position: relative; }
+.view-subtitle { color: var(--muted); font-size: 13px; padding: 0 16px; margin: 4px 0 0; }
+#tablesView.active { flex-direction: column; }
+#tablesView .tables-grid { flex: 1; min-height: 0; }
+.btn-sm { padding: 4px 10px; font-size: 12px; }
 
 /* ---------- Modales ---------- */
 .modal {

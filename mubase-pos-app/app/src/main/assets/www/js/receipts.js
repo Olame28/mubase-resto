@@ -27,6 +27,9 @@
     h.push('<table>');
     h.push('<tr><td>Reçu N°</td><td class="r-right r-bold">' + U.esc(sale.receiptNo) + '</td></tr>');
     h.push('<tr><td>Date</td><td class="r-right">' + U.esc(U.fmtDateTime(sale.date)) + '</td></tr>');
+    if (sale.tableName) {
+      h.push('<tr><td>Table</td><td class="r-right">' + U.esc(sale.tableName) + '</td></tr>');
+    }
     h.push('</table>');
     h.push('<div class="r-space"></div>');
 
@@ -156,6 +159,7 @@
     // 2. Informations du reçu
     L.push(ctr('REÇU N° ' + sale.receiptNo));
     L.push(ctr(U.fmtDateTime(sale.date)));
+    if (sale.tableName) L.push(ctr('Table : ' + sale.tableName));
     L.push(sep());
     // 3. Articles
     L.push(bld(pe('Qté', QW) + ' ' + pe('Désignation', DW) + ' ' + ps('P.U.', PW) + ' ' + ps('Total', TW)));

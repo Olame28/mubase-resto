@@ -174,7 +174,7 @@
     }
 
     if (O.currentTableId) {
-      document.getElementById('tableBadge').textContent = O.tableName(O.currentTableId);
+      document.getElementById('tableBadge').textContent = O.orderLabel();
       var sel = document.getElementById('tableSelect');
       if (sel.value !== O.currentTableId) sel.value = O.currentTableId;
     }
@@ -238,7 +238,9 @@
     MUBASE.DB.getAllCarts().then(function (carts) {
       var occupied = {};
       var counts = {};
+      var cartsById = {};
       (carts || []).forEach(function (c) {
+        cartsById[c.tableId] = c;
         if (c.items && c.items.length) {
           occupied[c.tableId] = true;
           var n = 0;
@@ -249,26 +251,75 @@
       var html = '';
       O.TABLES.forEach(function (tb) {
         var isOcc = !!occupied[tb.id];
+        var cart = cartsById[tb.id];
+        var label = (cart && cart.customName) || tb.name;
         var cls = 'table-card ' + (isOcc ? 'occupied' : 'free');
+        var status = isOcc
+          ? 'Occupée — ' + counts[tb.id] + ' article(s) — ' +
+            U.fmtFC(O.cartTotals(cart.items).fc)
+          : 'Libre';
         html += '<div class="' + cls + '" data-tid="' + U.esc(tb.id) + '">' +
-          '<div class="table-name">' + U.esc(tb.name) + '</div>' +
-          '<div class="table-status">' +
-          (isOcc ? 'Occupée — ' + counts[tb.id] + ' article(s)' : 'Libre') +
-          '</div></div>';
+          '<div class="table-name">' + U.esc(label) + '</div>' +
+          '<div class="table-status">' + status + '</div>' +
+          '<button class="table-rename" data-rid="' + U.esc(tb.id) + '" title="Nommer">✎</button>' +
+          '</div>';
+      });
+      // Commandes héritées sur d'anciens identifiants (ex. Comptoir, VIP)
+      (carts || []).forEach(function (c) {
+        if (!c.items || !c.items.length) return;
+        var known = O.TABLES.some(function (tb) { return tb.id === c.tableId; });
+        if (known) return;
+        var n = 0;
+        c.items.forEach(function (it) { n += it.qty; });
+        var lbl = c.customName || c.tableId;
+        html += '<div class="table-card occupied" data-tid="' + U.esc(c.tableId) + '">' +
+          '<div class="table-name">' + U.esc(lbl) + '</div>' +
+          '<div class="table-status">Occupée — ' + n + ' article(s) — ' +
+          U.fmtFC(O.cartTotals(c.items).fc) + '</div>' +
+          '<button class="table-rename" data-rid="' + U.esc(c.tableId) + '" title="Nommer">✎</button>' +
+          '</div>';
       });
       grid.innerHTML = html;
       var cards = grid.querySelectorAll('.table-card');
       for (var i = 0; i < cards.length; i++) {
-        cards[i].onclick = function () {
+        cards[i].onclick = function (e) {
+          if (e.target && e.target.classList && e.target.classList.contains('table-rename')) return;
           var tid = this.getAttribute('data-tid');
-          if (tid === O.currentTableId) {
-            App.showView('pos');
-          } else {
-            O.loadCart(tid);
-            App.showView('pos');
-          }
+          if (tid !== O.currentTableId) O.loadCart(tid);
+          App.showView('pos');
         };
       }
+      var renames = grid.querySelectorAll('.table-rename');
+      for (var j = 0; j < renames.length; j++) {
+        renames[j].onclick = function (e) {
+          e.stopPropagation();
+          App.openOrderName(this.getAttribute('data-rid'));
+        };
+      }
+    });
+  };
+
+  // Nomme une commande : table courante ou n'importe quelle table de la grille.
+  // Nom vide = la commande garde le nom de sa table.
+  App.openOrderName = function (tid) {
+    MUBASE.DB.getCart(tid).then(function (cart) {
+      var existing = (cart && cart.customName) || O.pendingNames[tid] || '';
+      U.promptText('Nom de la commande', 'Vide = ' + O.tableName(tid), function (val) {
+        if (val === null) return;
+        var name = (val || '').trim();
+        if (tid === O.currentTableId) {
+          O.setOrderName(name);
+          return;
+        }
+        if (name) O.pendingNames[tid] = name;
+        else delete O.pendingNames[tid];
+        if (cart && cart.items && cart.items.length) {
+          cart.customName = name;
+          MUBASE.DB.saveCart(cart);
+        }
+        App.refreshTablesUI();
+        U.toast(name ? 'Commande nommée « ' + name + ' ».' : 'Nom de table restauré.', 'ok');
+      });
     });
   };
 
@@ -324,7 +375,7 @@
       U.toast('Tous les articles ont déjà été envoyés en cuisine.', 'error');
       return;
     }
-    var tableName = O.tableName(O.currentTableId);
+    var tableName = O.orderLabel();
     var ticketNo = MUBASE.Receipts.nextKitchenNo();
     MUBASE.Receipts.sendToKitchen(items, tableName, ticketNo, function (directOk) {
       // On marque comme envoyés dans les deux cas : le bon a été produit
@@ -349,7 +400,7 @@
       '<div class="total-line"><span>Articles</span><span>' + O.cart.length + '</span></div>' +
       '<div class="total-line"><span>Total USD</span><strong>' + U.fmtUSD(t.usd) + '</strong></div>' +
       '<div class="total-line"><span>Total FC</span><strong>' + U.fmtFC(t.fc) + '</strong></div>' +
-      '<div class="total-line"><span>Table</span><span>' + U.esc(O.tableName(O.currentTableId)) + '</span></div>';
+      '<div class="total-line"><span>Table</span><span>' + U.esc(O.orderLabel()) + '</span></div>';
     document.getElementById('payDetails').classList.add('hidden');
     document.getElementById('payDetails').innerHTML = '';
     document.getElementById('btnPayConfirm').disabled = true;
@@ -869,9 +920,13 @@
       if (tid !== O.currentTableId) O.loadCart(tid);
     };
     // Boutons panier
+    document.getElementById('btnOrderName').onclick = function () {
+      if (!O.currentTableId) { U.toast('Ouvrez d’abord une commande.', 'error'); return; }
+      App.openOrderName(O.currentTableId);
+    };
     document.getElementById('btnClearCart').onclick = function () {
       if (!O.cart.length) return;
-      U.confirm('Vider le panier de ' + O.tableName(O.currentTableId) + ' ?', function (yes) {
+      U.confirm('Vider le panier de ' + O.orderLabel() + ' ?', function (yes) {
         if (yes) O.clearCart();
       });
     };

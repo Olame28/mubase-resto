@@ -1,0 +1,39 @@
+CACHE MANIFEST
+# MUBASE POS - cache hors ligne (AppCache, compatibilite Android 5.1)
+# INCREMENTER la version en debut de ligne a chaque publication
+# v23-2026-11-13
+
+CACHE:
+./
+./index.html
+./manifest.json
+./css/style.css
+./css/responsive.css
+./css/print.css
+./js/utils.js
+./js/currency.js
+./js/database.js
+./js/security.js
+./js/products.js
+./js/orders.js
+./js/payments.js
+./js/receipts.js
+./js/reports.js
+./js/settings.js
+./js/backup.js
+./js/sync.js
+./js/app.js
+./assets/icons/icon-72.png
+./assets/icons/icon-96.png
+./assets/icons/icon-128.png
+./assets/icons/icon-144.png
+./assets/icons/icon-152.png
+./assets/icons/icon-192.png
+./assets/icons/icon-384.png
+./assets/icons/icon-512.png
+
+NETWORK:
+*
+
+FALLBACK:
+./ /index.html
