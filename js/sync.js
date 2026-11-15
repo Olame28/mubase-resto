@@ -183,6 +183,11 @@
     setTimeout(SYNC.now, 3000);
     SYNC._timer = setInterval(SYNC.now, SYNC.AUTO_MS);
     window.addEventListener('online', function () { SYNC.now(); });
+    // Synchro aussi quand l'app revient au premier plan (apres veille, etc.)
+    window.addEventListener('focus', function () { SYNC.now(); });
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) SYNC.now();
+    });
   };
 
   /* Configuration runtime (depuis les parametres, PIN gere) */
