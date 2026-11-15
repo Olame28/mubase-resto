@@ -39,7 +39,8 @@
       MUBASE.DB.getSales(),
       MUBASE.DB.getShifts(),
       MUBASE.DB.getProducts(),
-      MUBASE.DB.getAll('settings')
+      MUBASE.DB.getAll('settings'),
+      MUBASE.DB.getAllCarts ? MUBASE.DB.getAllCarts() : Promise.resolve([])
     ]).then(function (r) {
       var settings = {};
       (r[3] || []).forEach(function (s) {
@@ -50,6 +51,7 @@
         shifts: r[1] || [],
         products: r[2] || [],
         settings: settings,
+        carts: r[4] || [],
         syncedAt: new Date().toISOString(),
         device: 'citaq'
       };
@@ -71,10 +73,37 @@
     var rs = remote.settings || {}, ls = local.settings || {};
     Object.keys(ls).forEach(function (k) { settings[k] = ls[k]; });
     Object.keys(rs).forEach(function (k) { settings[k] = rs[k]; }); // remote gagne
+    // Tombstones des paniers : fusion par date max (le plus recent gagne)
+    function tombMerge(a, b) {
+      var out = {}, src;
+      try { src = JSON.parse(a || '{}'); } catch (e) { src = {}; }
+      Object.keys(src).forEach(function (k) { out[k] = src[k]; });
+      try { src = JSON.parse(b || '{}'); } catch (e) { src = {}; }
+      Object.keys(src).forEach(function (k) {
+        if (!out[k] || src[k] > out[k]) out[k] = src[k];
+      });
+      return JSON.stringify(out);
+    }
+    settings['cart_tombstones'] = tombMerge(ls['cart_tombstones'], rs['cart_tombstones']);
+    var tomb = {};
+    try { tomb = JSON.parse(settings['cart_tombstones'] || '{}'); } catch (e) {}
+    // Paniers : union par tableId, la version la plus recente gagne,
+    // sauf si une tombstone est plus recente que le panier
+    var cMerged = {};
+    (local.carts || []).concat(remote.carts || []).forEach(function (c) {
+      var k = c.tableId || '';
+      var prev = cMerged[k];
+      if (!prev || String(c.updatedAt || '') >= String(prev.updatedAt || '')) cMerged[k] = c;
+    });
+    var cartsOut = Object.keys(cMerged).map(function (k) { return cMerged[k]; })
+      .filter(function (c) {
+        return !(tomb[c.tableId] && tomb[c.tableId] > (c.updatedAt || ''));
+      });
     return {
       sales: Object.keys(merged).map(function (k) { return merged[k]; }),
       shifts: Object.keys(sMerged).map(function (k) { return sMerged[k]; }),
-      settings: settings
+      settings: settings,
+      carts: cartsOut
     };
   }
 
@@ -138,6 +167,9 @@
     (m.shifts || []).forEach(function (s) {
       jobs.push(MUBASE.DB.add('shifts', s).catch(function () {}));
     });
+    (m.carts || []).forEach(function (c) {
+      jobs.push(MUBASE.DB.put('carts', c).catch(function () {}));
+    });
     // Settings : on ne réécrit que les clés connues pour éviter les doublons
     return Promise.all(jobs).then(function () {
       var sk = Object.keys(m.settings || {});
@@ -148,6 +180,46 @@
         });
       });
       return chain;
+    }).then(function () {
+      // Registre de suppressions technicien : retire les ventes/commandes
+      // visees en local. Idempotent : rejouer ne casse rien.
+      return applyTechDeletions(m.settings || {});
+    });
+  }
+
+  function applyTechDeletions(settings) {
+    var raw = settings['tech_deletions'];
+    if (!raw) return Promise.resolve();
+    var del;
+    try { del = typeof raw === 'string' ? JSON.parse(raw) : raw; }
+    catch (e) { return Promise.resolve(); }
+    var jobs = [];
+    (del.sales || []).forEach(function (receiptNo) {
+      jobs.push(MUBASE.DB.getSaleByReceipt(receiptNo).then(function (s) {
+        if (s && s.id !== undefined) return MUBASE.DB.del('sales', s.id);
+      }).catch(function () {}));
+    });
+    (del.carts || []).forEach(function (tableId) {
+      jobs.push(MUBASE.DB.deleteCart(tableId).catch(function () {}));
+    });
+    // Modifications technicien : applique les champs corriges sur les ventes
+    var edits = {};
+    try { edits = typeof settings['tech_edits'] === 'string' ? JSON.parse(settings['tech_edits']) : (settings['tech_edits'] || {}); }
+    catch (e) {}
+    Object.keys(edits).forEach(function (receiptNo) {
+      var f = edits[receiptNo] || {};
+      jobs.push(MUBASE.DB.getSaleByReceipt(receiptNo).then(function (s) {
+        if (!s) return;
+        if (f.totalFC !== undefined) s.totalFC = f.totalFC;
+        if (f.totalUSD !== undefined) s.totalUSD = f.totalUSD;
+        return MUBASE.DB.updateSale(s);
+      }).catch(function () {}));
+    });
+    return Promise.all(jobs).then(function () {
+      if (MUBASE.App) {
+        MUBASE.App.refreshCartUI && MUBASE.App.refreshCartUI();
+        MUBASE.App.refreshTablesUI && MUBASE.App.refreshTablesUI();
+      }
     });
   }
 

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MUBASE - Tableau de bord (boss)</title>
+<title>MUBASE - Tableau de bord</title>
 <style>
 body{font-family:Arial,sans-serif;background:#0d1117;color:#eee;margin:0;padding:16px}
 h1{color:#f0a500;font-size:22px}
@@ -19,13 +19,18 @@ button{background:#f0a500;color:#111;font-weight:700;cursor:pointer}
 .kpi{display:inline-block;background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:10px 16px;margin:4px 8px 4px 0;min-width:120px}
 .kpi b{display:block;font-size:20px;color:#f0a500}
 .pinbox{max-width:340px;margin:60px auto;text-align:center}
-.pinbox input{width:140px;text-align:center;letter-spacing:6px;font-size:20px}
+.pinbox input{width:170px;text-align:center;letter-spacing:4px;font-size:20px}
 .err{color:#f85149}
+.maint{position:fixed;bottom:6px;right:10px;font-size:10px;color:#30363d;text-decoration:none}
+.maint:hover{color:#8b949e}
+.mini{padding:4px 8px;font-size:12px;background:#21262d;color:#eee}
+.mini.del{background:#da3633;color:#fff}
+#tech{border:1px dashed #f0a500}
 </style>
 </head>
 <body>
 <div id="gate" class="pinbox card" style="display:none">
-  <h2>Accès boss</h2>
+  <h2>Espace de consultation</h2>
   <p class="muted">Entrez le code d'accès.</p>
   <input id="pin" type="password" inputmode="numeric" maxlength="8" placeholder="••••">
   <button onclick="checkPin()">Entrer</button>
@@ -38,17 +43,24 @@ button{background:#f0a500;color:#111;font-weight:700;cursor:pointer}
   <div id="dateRow" style="display:none">
     <input type="date" id="d1"> <span class="muted">au</span> <input type="date" id="d2">
     <button onclick="render()">Afficher</button>
+    <button class="mini" onclick="exportPDF()">Exporter PDF</button>
   </div>
   <div class="muted" id="status"></div>
 </div>
 <div id="out"></div>
+<div id="tech" class="card" style="display:none">
+  <h3 style="color:#f0a500">Console technicien</h3>
+  <div id="techOut"></div>
 </div>
+</div>
+<a class="maint" href="#" onclick="techGate();return false">maintenance</a>
 <script>
 var API='https://lwgqkolimdyagscyxqxa.supabase.co/rest/v1/mubase_pos?id=eq.1&select=data';
 var KEY='sb_publishable_E_YHskT74bz3cFlmmvYE1Q_MYYr71SV';
 var BOSS_PIN='2828';
-var DATA=null;
-var TYPES=[['today','Aujourd\'hui'],['date','Par date'],['period','Période'],['payment','Paiements'],['product','Produits'],['category','Catégories'],['cancel','Annulations'],['shifts','Clôtures Z']];
+var TECH_PIN='Blancos28';
+var DATA=null, techMode=false;
+var TYPES=[['today','Aujourd\'hui'],['orders','Commandes en cours'],['date','Par date'],['period','Période'],['payment','Paiements'],['product','Produits'],['category','Catégories'],['cancel','Annulations'],['shifts','Clôtures Z']];
 var cur='today';
 
 function fmt(n){return (Math.round((n||0)*100)/100).toLocaleString('fr-FR');}
@@ -58,8 +70,10 @@ function table(h,rows){var t='<table><tr>';h.forEach(function(x){t+='<th>'+esc(x
   rows.forEach(function(r){t+='<tr>';r.forEach(function(c){t+='<td>'+c+'</td>';});t+='</tr>';});
   return t+'</table>';}
 function todayStr(){var d=new Date();return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
-function addDays(ds,n){var d=new Date(ds+'T00:00:00');d.setDate(d.getDate()+n);
-  return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
+function paid(s){return (s.status||'paid')!=='cancelled';}
+function dayOf(s){return (s.date||'').slice(0,10);}
+function cartTotal(c){var fc=0,usd=0;(c.items||[]).forEach(function(it){fc+=(it.qty||0)*(+it.unitFC||0);usd+=(it.qty||0)*(+it.unitUSD||0);});return{fc:fc,usd:usd};}
+function cartLabel(c){return c.customName||c.tableId||'-';}
 
 function load(){
   document.getElementById('status').textContent=' Chargement...';
@@ -69,13 +83,9 @@ function load(){
   }).then(function(raw){
     DATA=(Array.isArray(raw)?(raw[0]&&raw[0].data)||{}:raw)||{};
     document.getElementById('status').textContent=' Dernière synchro : '+(DATA.syncedAt?fmtD(DATA.syncedAt):'-')+' ('+((DATA.sales||[]).length)+' ventes en base)';
-    render();
+    render(); if(techMode)renderTech();
   }).catch(function(e){document.getElementById('status').textContent=' Erreur : '+e.message;});
 }
-
-function paid(s){return (s.status||'paid')!=='cancelled';}
-function dayOf(s){return (s.date||'').slice(0,10);}
-function inRange(s,a,b){var d=dayOf(s);return d>=a&&d<=b;}
 
 function render(){
   var out=document.getElementById('out');
@@ -88,14 +98,24 @@ function render(){
   if(cur==='today'){a=b=todayStr();}
   else if(cur==='date'){a=b=d1;}
   else if(cur==='period'){a=d1;b=d2||d1;}
+  else if(cur==='orders'){a='';b='';}
   else {a='0000-00-00';b='9999-99-99';}
-  var sel=sales.filter(function(s){return inRange(s,a,b);});
+  var sel=(cur==='orders')?[]:sales.filter(function(s){return dayOf(s)>=a&&dayOf(s)<=b;});
   var ps=sel.filter(paid);
   var totFC=ps.reduce(function(x,s){return x+(+s.totalFC||0);},0);
   var totUSD=ps.reduce(function(x,s){return x+(+s.totalUSD||0);},0);
 
+  if(cur==='orders'){
+    var carts=(DATA.carts||[]).filter(function(c){return c.items&&c.items.length;});
+    var rows=carts.map(function(c){var t=cartTotal(c);
+      return ['<td>'+esc(cartLabel(c))+'</td><td>'+esc(c.tableId||'-')+'</td><td>'+(c.items.length)+' art.</td>'+
+        '<td>'+fmt(t.fc)+' FC</td><td>'+t.usd.toFixed(2)+' $</td><td>'+esc(fmtD(c.updatedAt))+'</td>'];});
+    out.innerHTML='<div class="card"><h3>Commandes ouvertes ('+carts.length+')</h3>'+
+      (rows.length?table(['Commande','Table','Contenu','Total FC','Total $','Maj'],rows):'<p class="muted">Aucune commande ouverte.</p>')+'</div>';
+    return;
+  }
+
   var h='';
-  // KPIs
   h+='<div class="card"><div class="kpi"><b>'+ps.length+'</b>ventes</div>'+
      '<div class="kpi"><b>'+fmt(totFC)+' FC</b></div>'+
      '<div class="kpi"><b>'+totUSD.toFixed(2)+' $</b></div>'+
@@ -149,6 +169,96 @@ function render(){
     h+='<div class="card"><h3>Clôtures Z</h3>'+(rows.length?table(['Date','Ventes','Total FC','Total $','Par'],rows):'<p class="muted">Aucune clôture enregistrée.</p>')+'</div>';
   }
   out.innerHTML=h;
+}
+
+/* ---------- Export PDF (impression -> PDF nomme par date) ---------- */
+function exportPDF(){
+  var d1=document.getElementById('d1').value,d2=document.getElementById('d2').value;
+  var label = cur==='today'?todayStr():(cur==='date'?d1:(d2&&d1!==d2?d1+'_'+d2:(d1||todayStr())));
+  var w=window.open('','_blank');
+  w.document.write('<html><head><title>rapport-'+label+'</title><style>body{font-family:Arial;padding:20px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #999;padding:5px;font-size:13px}h1{font-size:18px}h3{font-size:15px}.kpi{display:inline-block;border:1px solid #999;padding:8px 14px;margin:4px}.muted{color:#666}</style></head><body>');
+  w.document.write('<h1>MUBASE Coffee et Restaurant — Rapport</h1>');
+  w.document.write('<p>Période : '+esc(label)+' — généré le '+esc(fmtD(new Date().toISOString()))+'</p>');
+  w.document.write(document.getElementById('out').innerHTML);
+  w.document.write('</body></html>');
+  w.document.close(); w.focus(); w.print();
+}
+
+/* ---------- Mode technicien (discret) ---------- */
+function techGate(){
+  var p=window.prompt('Code technicien :','');
+  if(p===TECH_PIN){techMode=true;document.getElementById('tech').style.display='block';renderTech();load();}
+  else if(p!==null&&p!=='')window.alert('Code incorrect.');
+}
+function tlog(msg){
+  try{
+    var l=JSON.parse(localStorage.getItem('mubase_tech_log')||'[]');
+    l.unshift(new Date().toISOString()+' — '+msg);
+    localStorage.setItem('mubase_tech_log',JSON.stringify(l.slice(0,200)));
+  }catch(e){}
+}
+function getDel(){
+  var s=(DATA.settings||{});
+  try{return JSON.parse(s['tech_deletions']||'{"sales":[],"carts":[]}');}catch(e){return{sales:[],carts:[]};}
+}
+function putCloud(){
+  var body={id:1,data:DATA};
+  return fetch(API,{method:'PUT',headers:{apikey:KEY,Authorization:'Bearer '+KEY,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify(body)})
+    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);});
+}
+function renderTech(){
+  if(!techMode)return;
+  var el=document.getElementById('techOut');
+  if(!DATA){el.innerHTML='<p class="muted">Chargement...</p>';return;}
+  var sales=(DATA.sales||[]).slice().sort(function(a,b){return String(b.date).localeCompare(String(a.date));});
+  var rows=sales.map(function(s){
+    return ['<td>'+esc(s.receiptNo)+'</td><td>'+esc(fmtD(s.date))+'</td><td>'+esc(s.tableName||'-')+'</td>'+
+      '<td>'+fmt(s.totalFC)+' FC</td>'+
+      '<td><button class="mini" onclick="techEdit(\''+esc(s.receiptNo)+'\')">Modif</button> '+
+      '<button class="mini del" onclick="techDelSale(\''+esc(s.receiptNo)+'\')">Suppr</button></td>'];});
+  var carts=(DATA.carts||[]).filter(function(c){return c.items&&c.items.length;});
+  var crows=carts.map(function(c){var t=cartTotal(c);
+    return ['<td>'+esc(cartLabel(c))+'</td><td>'+esc(c.tableId||'-')+'</td><td>'+fmt(t.fc)+' FC</td>'+
+      '<td><button class="mini del" onclick="techDelCart(\''+esc(c.tableId)+'\')">Suppr</button></td>'];});
+  var log=[];
+  try{log=JSON.parse(localStorage.getItem('mubase_tech_log')||'[]');}catch(e){}
+  var lh=log.slice(0,15).map(function(x){return '<div class="muted">'+esc(x)+'</div>';}).join('');
+  el.innerHTML='<h4>Ventes ('+sales.length+')</h4>'+(rows.length?table(['Reçu','Date','Table','Total FC','Actions'],rows):'<p class="muted">Aucune.</p>')+
+    '<h4>Commandes ouvertes ('+carts.length+')</h4>'+(crows.length?table(['Commande','Table','Total FC','Actions'],crows):'<p class="muted">Aucune.</p>')+
+    '<h4>Journal technicien</h4>'+lh;
+}
+function techDelSale(rno){
+  if(!window.confirm('Supprimer la vente '+rno+' ? (disparaît partout en ~1 min)'))return;
+  DATA.sales=(DATA.sales||[]).filter(function(s){return s.receiptNo!==rno;});
+  var d=getDel(); if(d.sales.indexOf(rno)===-1)d.sales.push(rno);
+  DATA.settings=DATA.settings||{};DATA.settings['tech_deletions']=JSON.stringify(d);
+  putCloud().then(function(){tlog('vente supprimée : '+rno);renderTech();load();});
+}
+function techDelCart(tid){
+  if(!window.confirm('Supprimer la commande '+tid+' ?'))return;
+  DATA.carts=(DATA.carts||[]).filter(function(c){return c.tableId!==tid;});
+  var d=getDel(); if(d.carts.indexOf(tid)===-1)d.carts.push(tid);
+  DATA.settings=DATA.settings||{};DATA.settings['tech_deletions']=JSON.stringify(d);
+  // tombstone pour éviter la résurrection
+  var tb={};try{tb=JSON.parse((DATA.settings||{})['cart_tombstones']||'{}');}catch(e){}
+  tb[tid]=new Date().toISOString();
+  DATA.settings['cart_tombstones']=JSON.stringify(tb);
+  putCloud().then(function(){tlog('commande supprimée : '+tid);renderTech();load();});
+}
+function techEdit(rno){
+  var s=(DATA.sales||[]).filter(function(x){return x.receiptNo===rno;})[0];
+  if(!s){window.alert('Vente introuvable.');return;}
+  var nfc=window.prompt('Nouveau total FC ('+s.totalFC+') :',s.totalFC);
+  if(nfc===null)return;
+  var nusd=window.prompt('Nouveau total USD ('+(s.totalUSD||0)+') :',s.totalUSD||0);
+  if(nusd===null)return;
+  s.totalFC=parseFloat(String(nfc).replace(/\s/g,'').replace(',','.'))||0;
+  s.totalUSD=parseFloat(String(nusd).replace(/\s/g,'').replace(',','.'))||0;
+  // registre d'édition pour propagation au Citaq
+  var ed={};try{ed=JSON.parse((DATA.settings||{})['tech_edits']||'{}');}catch(e){}
+  ed[rno]={totalFC:s.totalFC,totalUSD:s.totalUSD};
+  DATA.settings=DATA.settings||{};DATA.settings['tech_edits']=JSON.stringify(ed);
+  putCloud().then(function(){tlog('vente modifiée : '+rno+' -> '+s.totalFC+' FC');renderTech();load();});
 }
 
 // Onglets

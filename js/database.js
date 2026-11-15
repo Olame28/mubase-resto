@@ -162,8 +162,26 @@
       return MUBASE.DB._req(s.get(tableId));
     });
   };
-  D.saveCart = function (cart) { return D.put('carts', cart); };
-  D.deleteCart = function (tableId) { return D.del('carts', tableId); };
+  // Tombstones des paniers : une commande supprimee ne doit pas reapparaitre
+  // via la synchro cloud. { tableId: dateSuppression }
+  function cartTombstones() {
+    try { return JSON.parse(D.getSettingSync('cart_tombstones') || '{}'); }
+    catch (e) { return {}; }
+  }
+  D.saveCart = function (cart) {
+    var t = cartTombstones();
+    if (cart && cart.tableId && t[cart.tableId]) {
+      delete t[cart.tableId];
+      D.setSetting('cart_tombstones', JSON.stringify(t));
+    }
+    return D.put('carts', cart);
+  };
+  D.deleteCart = function (tableId) {
+    var t = cartTombstones();
+    t[tableId] = new Date().toISOString();
+    D.setSetting('cart_tombstones', JSON.stringify(t));
+    return D.del('carts', tableId);
+  };
   D.getAllCarts = function () { return D.getAll('carts'); };
 
   // ---- Ventes ----
