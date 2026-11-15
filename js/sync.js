@@ -192,8 +192,11 @@
   };
 
   SYNC.loadConfig = function () {
-    SYNC.URL = MUBASE.DB.getSettingSync('sync_url') || '';
-    SYNC.API_KEY = MUBASE.DB.getSettingSync('sync_key') || '';
+    // Ne remplace les valeurs par defaut que si un reglage existe vraiment
+    var u = MUBASE.DB.getSettingSync('sync_url');
+    var k = MUBASE.DB.getSettingSync('sync_key');
+    if (u) SYNC.URL = u;
+    if (k) SYNC.API_KEY = k;
   };
 
   MUBASE.Sync = SYNC;
