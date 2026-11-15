@@ -153,7 +153,10 @@
 
   /* Synchro complete : pull -> merge -> apply -> push */
   SYNC.now = function () {
-    if (!enabled() || SYNC._syncing || !navigator.onLine) return Promise.resolve(false);
+    // Pas de test navigator.onLine : sur le vieux Chrome du Citaq il peut
+    // renvoyer false en permanence. On tente quand meme : en hors ligne
+    // la requete echoue vite et la synchro reessaiera au prochain cycle.
+    if (!enabled() || SYNC._syncing) return Promise.resolve(false);
     SYNC._syncing = true;
     return pull().then(function (remote) {
       return exportLocal().then(function (local) {
@@ -165,7 +168,8 @@
       });
     }).then(function () {
       SYNC._syncing = false;
-      if (MUBASE.App) MUBASE.App.refreshSaveBadge && MUBASE.App.refreshSaveBadge('Synchronisé');
+      var badge = document.getElementById('saveBadge');
+      if (badge) badge.textContent = 'Synchronisé';
       return true;
     }).catch(function () {
       SYNC._syncing = false;
