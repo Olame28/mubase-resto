@@ -206,6 +206,12 @@
     (del.carts || []).forEach(function (tableId) {
       jobs.push(MUBASE.DB.deleteCart(tableId).catch(function () {}));
     });
+    (del.shifts || []).forEach(function (id) {
+      jobs.push(MUBASE.DB.del('shifts', id).catch(function () {}));
+    });
+    (del.products || []).forEach(function (id) {
+      jobs.push(MUBASE.DB.deleteProduct(id).catch(function () {}));
+    });
     // Modifications technicien : applique les champs corriges sur les ventes
     var edits = {};
     try { edits = typeof settings['tech_edits'] === 'string' ? JSON.parse(settings['tech_edits']) : (settings['tech_edits'] || {}); }
@@ -216,7 +222,26 @@
         if (!s) return;
         if (f.totalFC !== undefined) s.totalFC = f.totalFC;
         if (f.totalUSD !== undefined) s.totalUSD = f.totalUSD;
+        if (f.tableName !== undefined) s.tableName = f.tableName;
         return MUBASE.DB.updateSale(s);
+      }).catch(function () {}));
+    });
+    // Editions de produits : { id: {priceUSD, priceFC, name, active} }
+    var pedits = {};
+    try { pedits = typeof settings['tech_edits_products'] === 'string' ? JSON.parse(settings['tech_edits_products']) : (settings['tech_edits_products'] || {}); }
+    catch (e) {}
+    Object.keys(pedits).forEach(function (pid) {
+      var f = pedits[pid] || {};
+      jobs.push(MUBASE.DB.getProducts().then(function (prods) {
+        for (var i = 0; i < prods.length; i++) {
+          if (String(prods[i].id) === String(pid)) {
+            if (f.priceUSD !== undefined) prods[i].priceUSD = f.priceUSD;
+            if (f.priceFC !== undefined) prods[i].priceFC = f.priceFC;
+            if (f.name !== undefined) prods[i].name = f.name;
+            if (f.active !== undefined) prods[i].active = f.active;
+            return MUBASE.DB.saveProduct(prods[i]);
+          }
+        }
       }).catch(function () {}));
     });
     return Promise.all(jobs).then(function () {

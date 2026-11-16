@@ -199,7 +199,7 @@ function tlog(msg){
 }
 function getDel(){
   var s=(DATA.settings||{});
-  try{return JSON.parse(s['tech_deletions']||'{"sales":[],"carts":[]}');}catch(e){return{sales:[],carts:[]};}
+  try{return JSON.parse(s['tech_deletions']||'{"sales":[],"carts":[],"shifts":[],"products":[]}');}catch(e){return{sales:[],carts:[],shifts:[],products:[]};}
 }
 function putCloud(){
   var body={id:1,data:DATA};
@@ -212,7 +212,8 @@ function renderTech(){
   if(!DATA){el.innerHTML='<p class="muted">Chargement...</p>';return;}
   var sales=(DATA.sales||[]).slice().sort(function(a,b){return String(b.date).localeCompare(String(a.date));});
   var rows=sales.map(function(s){
-    return ['<td>'+esc(s.receiptNo)+'</td><td>'+esc(fmtD(s.date))+'</td><td>'+esc(s.tableName||'-')+'</td>'+
+    var tag=s.status==='cancelled'?' <b style="color:#f85149">ANNULÉE</b>':'';
+    return ['<td>'+esc(s.receiptNo)+tag+'</td><td>'+esc(fmtD(s.date))+'</td><td>'+esc(s.tableName||'-')+'</td>'+
       '<td>'+fmt(s.totalFC)+' FC</td>'+
       '<td><button class="mini" onclick="techEdit(\''+esc(s.receiptNo)+'\')">Modif</button> '+
       '<button class="mini del" onclick="techDelSale(\''+esc(s.receiptNo)+'\')">Suppr</button></td>'];});
@@ -220,11 +221,24 @@ function renderTech(){
   var crows=carts.map(function(c){var t=cartTotal(c);
     return ['<td>'+esc(cartLabel(c))+'</td><td>'+esc(c.tableId||'-')+'</td><td>'+fmt(t.fc)+' FC</td>'+
       '<td><button class="mini del" onclick="techDelCart(\''+esc(c.tableId)+'\')">Suppr</button></td>'];});
+  var shifts=(DATA.shifts||[]).slice().sort(function(a,b){return String(b.date).localeCompare(String(a.date));});
+  var srows=shifts.map(function(s){
+    return ['<td>'+esc(fmtD(s.date))+'</td><td>'+(s.salesCount||0)+'</td><td>'+fmt(s.totalFC||0)+' FC</td>'+
+      '<td><button class="mini del" onclick="techDelShift('+s.id+')">Suppr</button></td>'];});
+  var prods=(DATA.products||[]);
+  var prows=prods.map(function(p){
+    return ['<td>'+esc(p.name)+'</td><td>'+esc(p.category||'-')+'</td>'+
+      '<td>'+(p.priceUSD!=null?p.priceUSD+' $':(p.priceFC!=null?p.priceFC+' FC':'-'))+'</td>'+
+      '<td>'+(p.active===false?'non':'oui')+'</td>'+
+      '<td><button class="mini" onclick="techEditProduct(\''+esc(p.id)+'\')">Modif</button> '+
+      '<button class="mini del" onclick="techDelProduct(\''+esc(p.id)+'\')">Suppr</button></td>'];});
   var log=[];
   try{log=JSON.parse(localStorage.getItem('mubase_tech_log')||'[]');}catch(e){}
   var lh=log.slice(0,15).map(function(x){return '<div class="muted">'+esc(x)+'</div>';}).join('');
   el.innerHTML='<h4>Ventes ('+sales.length+')</h4>'+(rows.length?table(['Reçu','Date','Table','Total FC','Actions'],rows):'<p class="muted">Aucune.</p>')+
     '<h4>Commandes ouvertes ('+carts.length+')</h4>'+(crows.length?table(['Commande','Table','Total FC','Actions'],crows):'<p class="muted">Aucune.</p>')+
+    '<h4>Clôtures Z ('+shifts.length+')</h4>'+(srows.length?table(['Date','Ventes','Total FC','Actions'],srows):'<p class="muted">Aucune.</p>')+
+    '<h4>Produits ('+prods.length+')</h4>'+(prows.length?table(['Produit','Catégorie','Prix','Actif','Actions'],prows):'<p class="muted">Aucun.</p>')+
     '<h4>Journal technicien</h4>'+lh;
 }
 function techDelSale(rno){
@@ -244,6 +258,39 @@ function techDelCart(tid){
   tb[tid]=new Date().toISOString();
   DATA.settings['cart_tombstones']=JSON.stringify(tb);
   putCloud().then(function(){tlog('commande supprimée : '+tid);renderTech();load();});
+}
+function techDelShift(id){
+  if(!window.confirm('Supprimer la clôture Z #'+id+' ?'))return;
+  DATA.shifts=(DATA.shifts||[]).filter(function(s){return s.id!==id;});
+  var d=getDel(); if(!d.shifts)d.shifts=[]; if(d.shifts.indexOf(id)===-1)d.shifts.push(id);
+  DATA.settings=DATA.settings||{};DATA.settings['tech_deletions']=JSON.stringify(d);
+  putCloud().then(function(){tlog('clôture Z supprimée : #'+id);renderTech();load();});
+}
+function techDelProduct(pid){
+  if(!window.confirm('Supprimer le produit '+pid+' ? (irrécupérable côté rapports passés : les ventes gardent le nom)'))return;
+  DATA.products=(DATA.products||[]).filter(function(p){return String(p.id)!==String(pid);});
+  var d=getDel(); if(!d.products)d.products=[]; if(d.products.indexOf(pid)===-1)d.products.push(pid);
+  DATA.settings=DATA.settings||{};DATA.settings['tech_deletions']=JSON.stringify(d);
+  putCloud().then(function(){tlog('produit supprimé : '+pid);renderTech();load();});
+}
+function techEditProduct(pid){
+  var p=(DATA.products||[]).filter(function(x){return String(x.id)===String(pid);})[0];
+  if(!p){window.alert('Produit introuvable.');return;}
+  var usd=window.prompt('Prix USD (vide = aucun) :',p.priceUSD!=null?p.priceUSD:'');
+  if(usd===null)return;
+  var fc=window.prompt('Prix FC (vide = aucun) :',p.priceFC!=null?p.priceFC:'');
+  if(fc===null)return;
+  var name=window.prompt('Nom :',p.name);
+  if(name===null)return;
+  var act=window.confirm('Produit ACTIF à la vente ? (OK=oui, Annuler=non)');
+  p.name=name.trim()||p.name;
+  p.priceUSD=usd.trim()===''?null:parseFloat(usd);
+  p.priceFC=fc.trim()===''?null:parseInt(fc,10);
+  p.active=act;
+  var ed={};try{ed=JSON.parse((DATA.settings||{})['tech_edits_products']||'{}');}catch(e){}
+  ed[pid]={name:p.name,priceUSD:p.priceUSD,priceFC:p.priceFC,active:p.active};
+  DATA.settings=DATA.settings||{};DATA.settings['tech_edits_products']=JSON.stringify(ed);
+  putCloud().then(function(){tlog('produit modifié : '+p.name);renderTech();load();});
 }
 function techEdit(rno){
   var s=(DATA.sales||[]).filter(function(x){return x.receiptNo===rno;})[0];
