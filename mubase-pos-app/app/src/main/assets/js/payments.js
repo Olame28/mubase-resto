@@ -104,22 +104,27 @@
     }
     P.processing = true;
 
-    var receiptNo = P.nextReceiptNo();
-    var draft = MUBASE.Orders.buildSale(receiptNo, payment);
-    draft.discountUSD = payment.discountUSD || 0;
-    draft.discountFC = payment.discountFC || 0;
-    draft.totalUSD = payment.totalUSD;
-    draft.totalFC = payment.totalFC;
-    draft.status = 'paid';
-
-    // Anti double paiement : vérifier qu'aucune vente n'a ce numéro
-    return MUBASE.DB.getSaleByReceipt(receiptNo).then(function (existing) {
-      if (existing) {
-        throw new Error('Reçu ' + receiptNo + ' existe déjà.');
-      }
-      return MUBASE.DB.addSale(draft);
-    }).then(function () {
-      MUBASE.Security.log('VENTE', receiptNo + ' | ' + draft.tableName + ' | ' +
+    // Anti double paiement : on boucle jusqu'a trouver un numero libre.
+    // Le compteur peut etre revenu en arriere via la synchro cloud,
+    // donc on verifie toujours contre les ventes existantes.
+    var attempt = 0;
+    function tryReserve() {
+      attempt++;
+      if (attempt > 200) throw new Error('Impossible de générer un numéro de reçu libre.');
+      var receiptNo = P.nextReceiptNo();
+      var draft = MUBASE.Orders.buildSale(receiptNo, payment);
+      draft.discountUSD = payment.discountUSD || 0;
+      draft.discountFC = payment.discountFC || 0;
+      draft.totalUSD = payment.totalUSD;
+      draft.totalFC = payment.totalFC;
+      draft.status = 'paid';
+      return MUBASE.DB.getSaleByReceipt(receiptNo).then(function (existing) {
+        if (existing) return tryReserve(); // numero deja pris : on recommence
+        return MUBASE.DB.addSale(draft).then(function () { return draft; });
+      });
+    }
+    return tryReserve().then(function (draft) {
+      MUBASE.Security.log('VENTE', draft.receiptNo + ' | ' + draft.tableName + ' | ' +
         U.fmtUSD(draft.totalUSD) + ' | ' + payment.method);
       return draft;
     }).catch(function (err) {
