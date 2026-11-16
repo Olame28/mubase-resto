@@ -468,12 +468,6 @@
     function finish(ok) {
       if (!done) { done = true; if (cb) cb(ok); }
     }
-    // Si le pont a echoue recemment, on saute la tentative XHR
-    // (timeout) pendant 1 min puis on reteste : l'impression directe
-    // revient toute seule si le pont reapparait.
-    if (R._bridgeDownUntil && Date.now() < R._bridgeDownUntil) {
-      finish(false); return;
-    }
     // Pont natif (APK Android) : impression thermique directe, synchrone
     try {
       if (window.MUBASEPrint && typeof window.MUBASEPrint.printTicket === 'function') {
@@ -484,6 +478,12 @@
     } catch (e) {
       finish(false);
       return;
+    }
+    // Si le pont XHR a echoue recemment, on saute la tentative
+    // (timeout) pendant 1 min puis on reteste : l'impression directe
+    // revient toute seule si le pont reapparait.
+    if (R._bridgeDownUntil && Date.now() < R._bridgeDownUntil) {
+      finish(false); return;
     }
     try {
       var xhr = new XMLHttpRequest();
@@ -534,7 +534,13 @@
       return;
     }
     if (R._lastSale) {
-      var text = R.buildReceiptText(R._lastSale);
+      var text;
+      try {
+        text = R.buildReceiptText(R._lastSale);
+      } catch (e) {
+        R.printLastFallback();
+        return;
+      }
       R.printDirect(text, function (ok) {
         if (!ok) R.printLastFallback();
       });
