@@ -468,9 +468,12 @@
     function finish(ok) {
       if (!done) { done = true; if (cb) cb(ok); }
     }
-    // Si le pont a deja echoue dans cette session, on saute la tentative
-    // XHR (timeout 2,5 s) et on passe directement a l'aperçu : fini le retard.
-    if (R._bridgeDown) { finish(false); return; }
+    // Si le pont a echoue recemment, on saute la tentative XHR
+    // (timeout) pendant 1 min puis on reteste : l'impression directe
+    // revient toute seule si le pont reapparait.
+    if (R._bridgeDownUntil && Date.now() < R._bridgeDownUntil) {
+      finish(false); return;
+    }
     // Pont natif (APK Android) : impression thermique directe, synchrone
     try {
       if (window.MUBASEPrint && typeof window.MUBASEPrint.printTicket === 'function') {
@@ -490,15 +493,15 @@
       xhr.onreadystatechange = function () {
         if (xhr.readyState === 4) {
           var ok = xhr.status >= 200 && xhr.status < 300;
-          if (!ok) R._bridgeDown = true;
+          if (!ok) R._bridgeDownUntil = Date.now() + 60000;
           finish(ok);
         }
       };
-      xhr.ontimeout = function () { R._bridgeDown = true; finish(false); };
-      xhr.onerror = function () { R._bridgeDown = true; finish(false); };
+      xhr.ontimeout = function () { R._bridgeDownUntil = Date.now() + 60000; finish(false); };
+      xhr.onerror = function () { R._bridgeDownUntil = Date.now() + 60000; finish(false); };
       xhr.send(text);
     } catch (e) {
-      R._bridgeDown = true;
+      R._bridgeDownUntil = Date.now() + 60000;
       finish(false);
     }
     // Filet de sécurité si aucun événement ne revient
