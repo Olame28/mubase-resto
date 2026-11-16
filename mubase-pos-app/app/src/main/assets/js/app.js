@@ -650,6 +650,7 @@
     });
     sale.totalUSD = t.usd;
     sale.totalFC = t.fc;
+    sale.editedAt = new Date().toISOString();
     MUBASE.DB.updateSale(sale).then(function () {
       MUBASE.Security.log('MODIF_VENTE', sale.receiptNo + ' | nouveaux totaux ' +
         U.fmtUSD(t.usd) + ' / ' + U.fmtFC(t.fc));

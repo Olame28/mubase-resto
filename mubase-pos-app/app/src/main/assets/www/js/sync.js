@@ -63,7 +63,11 @@
     function keyOf(s) { return s.id || s.receiptNo || JSON.stringify(s).length + '_' + (s.date || ''); }
     var merged = {};
     (local.sales || []).concat(remote.sales || []).forEach(function (s) {
-      merged[keyOf(s)] = s;
+      var k = keyOf(s), prev = merged[k];
+      // La version la plus recente (editedAt > date) gagne, dans les deux sens
+      var t = String(s.editedAt || s.date || '');
+      var pt = prev ? String(prev.editedAt || prev.date || '') : '';
+      if (!prev || t >= pt) merged[k] = s;
     });
     var sMerged = {};
     (local.shifts || []).concat(remote.shifts || []).forEach(function (s) {

@@ -142,6 +142,7 @@
         if (String(sales[i].id) === String(saleId)) {
           sales[i].status = 'cancelled';
           sales[i].cancelledAt = new Date().toISOString();
+          sales[i].editedAt = sales[i].cancelledAt;
           sales[i].cancelReason = reason || '';
           return MUBASE.DB.updateSale(sales[i]).then(function () {
             MUBASE.Security.log('ANNULATION', 'Reçu ' + sales[i].receiptNo +
