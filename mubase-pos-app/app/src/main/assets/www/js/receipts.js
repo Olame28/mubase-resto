@@ -310,7 +310,7 @@
       if (!ok) {
         document.getElementById('printArea').innerHTML = R.buildMenuHTML(products);
         U.toast('Imprimante directe indisponible : aperçu d\'impression ouvert.', 'error');
-        setTimeout(function () { window.print(); }, 100);
+        setTimeout(R.safePrint, 100);
       } else {
         U.toast('Menu imprimé.', 'ok');
       }
@@ -463,11 +463,26 @@
     return 'KC-' + ymd + '-' + num;
   };
 
+  // Impression navigateur sérialisée : deux window.print() trop proches
+  // faisaient ignorer le second par le navigateur (reçu bloqué après
+  // le bon de cuisine). On espace les appels d'au moins 800 ms.
+  R._printTimer = null;
+  R.safePrint = function () {
+    if (R._printTimer) return;
+    R._printTimer = setTimeout(function () {
+      R._printTimer = null;
+      try { window.print(); } catch (e) {}
+    }, 800);
+  };
+
   R.printDirect = function (text, cb) {
     var done = false;
     function finish(ok) {
       if (!done) { done = true; if (cb) cb(ok); }
     }
+    // Si le pont a deja echoue dans cette session, on saute la tentative
+    // XHR (timeout 2,5 s) et on passe directement a l'aperçu : fini le retard.
+    if (R._bridgeDown) { finish(false); return; }
     // Pont natif (APK Android) : impression thermique directe, synchrone
     try {
       if (window.MUBASEPrint && typeof window.MUBASEPrint.printTicket === 'function') {
@@ -479,12 +494,6 @@
       finish(false);
       return;
     }
-    // Si le pont XHR a echoue recemment, on saute la tentative
-    // (timeout) pendant 1 min puis on reteste : l'impression directe
-    // revient toute seule si le pont reapparait.
-    if (R._bridgeDownUntil && Date.now() < R._bridgeDownUntil) {
-      finish(false); return;
-    }
     try {
       var xhr = new XMLHttpRequest();
       xhr.open('POST', PRINT_URL, true);
@@ -493,15 +502,15 @@
       xhr.onreadystatechange = function () {
         if (xhr.readyState === 4) {
           var ok = xhr.status >= 200 && xhr.status < 300;
-          if (!ok) R._bridgeDownUntil = Date.now() + 60000;
+          if (!ok) R._bridgeDown = true;
           finish(ok);
         }
       };
-      xhr.ontimeout = function () { R._bridgeDownUntil = Date.now() + 60000; finish(false); };
-      xhr.onerror = function () { R._bridgeDownUntil = Date.now() + 60000; finish(false); };
+      xhr.ontimeout = function () { R._bridgeDown = true; finish(false); };
+      xhr.onerror = function () { R._bridgeDown = true; finish(false); };
       xhr.send(text);
     } catch (e) {
-      R._bridgeDownUntil = Date.now() + 60000;
+      R._bridgeDown = true;
       finish(false);
     }
     // Filet de sécurité si aucun événement ne revient
@@ -519,7 +528,7 @@
         // Secours : aperçu d'impression Android
         document.getElementById('printArea').innerHTML = R.buildKitchenTicketHTML(items, tableName);
         U.toast('Imprimante directe indisponible : aperçu d\'impression ouvert.', 'error');
-        setTimeout(function () { window.print(); }, 100);
+        setTimeout(R.safePrint, 100);
         if (onPrinted) onPrinted(false);
       }
     });
@@ -534,13 +543,7 @@
       return;
     }
     if (R._lastSale) {
-      var text;
-      try {
-        text = R.buildReceiptText(R._lastSale);
-      } catch (e) {
-        R.printLastFallback();
-        return;
-      }
+      var text = R.buildReceiptText(R._lastSale);
       R.printDirect(text, function (ok) {
         if (!ok) R.printLastFallback();
       });
@@ -553,9 +556,7 @@
     var container = document.getElementById('receiptContainer');
     var area = document.getElementById('printArea');
     area.innerHTML = container.innerHTML;
-    setTimeout(function () {
-      window.print();
-    }, 100);
+    setTimeout(R.safePrint, 100);
   };
 
   // Test d'impression : génère un reçu factice

@@ -310,7 +310,7 @@
       if (!ok) {
         document.getElementById('printArea').innerHTML = R.buildMenuHTML(products);
         U.toast('Imprimante directe indisponible : aperçu d\'impression ouvert.', 'error');
-        setTimeout(function () { window.print(); }, 100);
+        setTimeout(R.safePrint, 100);
       } else {
         U.toast('Menu imprimé.', 'ok');
       }
@@ -463,6 +463,18 @@
     return 'KC-' + ymd + '-' + num;
   };
 
+  // Impression navigateur sérialisée : deux window.print() trop proches
+  // faisaient ignorer le second par le navigateur (reçu bloqué après
+  // le bon de cuisine). On espace les appels d'au moins 800 ms.
+  R._printTimer = null;
+  R.safePrint = function () {
+    if (R._printTimer) return;
+    R._printTimer = setTimeout(function () {
+      R._printTimer = null;
+      try { window.print(); } catch (e) {}
+    }, 800);
+  };
+
   R.printDirect = function (text, cb) {
     var done = false;
     function finish(ok) {
@@ -516,7 +528,7 @@
         // Secours : aperçu d'impression Android
         document.getElementById('printArea').innerHTML = R.buildKitchenTicketHTML(items, tableName);
         U.toast('Imprimante directe indisponible : aperçu d\'impression ouvert.', 'error');
-        setTimeout(function () { window.print(); }, 100);
+        setTimeout(R.safePrint, 100);
         if (onPrinted) onPrinted(false);
       }
     });
@@ -544,9 +556,7 @@
     var container = document.getElementById('receiptContainer');
     var area = document.getElementById('printArea');
     area.innerHTML = container.innerHTML;
-    setTimeout(function () {
-      window.print();
-    }, 100);
+    setTimeout(R.safePrint, 100);
   };
 
   // Test d'impression : génère un reçu factice
