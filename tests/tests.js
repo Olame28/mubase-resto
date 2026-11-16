@@ -53,21 +53,21 @@
   function testCurrency() {
     suite('Devises et conversions');
     var C = MUBASE.Currency;
-    eq(C.getRate(), 2800, 'Taux par défaut 2800');
-    eq(C.getRounding(), 100, 'Arrondi par défaut 100 FC');
-    eq(C.usdToFC(4), 11200, '4 USD -> 11200 FC');
-    eq(C.usdToFC(1.5), 4200, '1.5 USD -> 4200 FC');
-    near(C.fcToUSD(5000), 1.79, 0.01, '5000 FC -> ~1.79 USD');
+    eq(C.getRate(), 2400, 'Taux par défaut 2400');
+    eq(C.getRounding(), 1, 'Arrondi par défaut 1 FC (montant exact)');
+    eq(C.usdToFC(4), 9600, '4 USD -> 9600 FC');
+    eq(C.usdToFC(1.5), 3600, '1.5 USD -> 3600 FC');
+    near(C.fcToUSD(5000), 2.08, 0.01, '5000 FC -> ~2.08 USD');
     // produit USD
     var pUSD = { priceUSD: 4 };
     var pr = C.productPrices(pUSD);
     near(pr.usd, 4, 0.001, 'Prix USD produit = 4');
-    eq(pr.fc, 11200, 'Équivalent FC = 11200');
+    eq(pr.fc, 9600, 'Équivalent FC = 9600');
     // produit FC fixe
     var pFC = { priceFC: 5000 };
     var pr2 = C.productPrices(pFC);
     eq(pr2.fc, 5000, 'Prix FC fixe = 5000');
-    near(pr2.usd, 1.79, 0.01, 'Équivalent USD ~1.79');
+    near(pr2.usd, 2.08, 0.01, 'Équivalent USD ~2.08');
     // totaux
     var t = C.totals([{ qty: 2, unitUSD: 4, unitFC: 11200 }, { qty: 1, unitUSD: 0, unitFC: 0 }]);
     eq(t.usd, 8, 'Total USD = 8');
@@ -115,7 +115,7 @@
     var r1 = P.computePayment(sale, { method: 'USD', usdReceived: 15 });
     ok(r1.ok, 'Paiement USD 15$ accepté pour total 10$');
     near(r1.payment.usdChange, 5, 0.001, 'Monnaie USD = 5$');
-    eq(r1.payment.fcChange, 14000, 'Monnaie FC = 14000');
+    eq(r1.payment.fcChange, 12000, 'Monnaie FC = 12000');
     // USD insuffisant
     var r2 = P.computePayment(sale, { method: 'USD', usdReceived: 9 });
     ok(!r2.ok, 'Paiement USD 9$ refusé (insuffisant)');
@@ -126,9 +126,9 @@
     // FC insuffisant
     var r4 = P.computePayment(sale, { method: 'FC', fcReceived: 10000 });
     ok(!r4.ok, 'Paiement FC 10000 refusé');
-    // Mixte : 5$ + 14000 FC = 10$
-    var r5 = P.computePayment(sale, { method: 'MIXED', usdReceived: 5, fcReceived: 14000 });
-    ok(r5.ok, 'Mixte 5$ + 14000 FC accepté');
+    // Mixte : 5$ + 16000 FC = 10$ (5*2400 + 16000 = 28000)
+    var r5 = P.computePayment(sale, { method: 'MIXED', usdReceived: 5, fcReceived: 16000 });
+    ok(r5.ok, 'Mixte 5$ + 16000 FC accepté');
     eq(r5.payment.fcChange, 0, 'Pas de monnaie en mixte exact');
     // Mixte insuffisant
     var r6 = P.computePayment(sale, { method: 'MIXED', usdReceived: 5, fcReceived: 10000 });
@@ -163,7 +163,7 @@
       .then(function () { return DB.loadSettingsCache(); })
       .then(function () {
         var s = MUBASE.Currency.getSettings();
-        if (s.rate == null) { s.rate = 2800; s.rounding = 100; return DB.setSetting('settings', s); }
+        if (s.rate == null) { s.rate = 2400; s.rounding = 1; return DB.setSetting('settings', s); }
       })
       .then(function () { return MUBASE.Products.seedIfEmpty(); })
       .then(function () { return DB.getProducts(); })
@@ -182,7 +182,7 @@
           O.addProduct(p2);
           var t = O.cartTotals();
           near(t.usd, 8 + MUBASE.Currency.fcToUSD(5000), 0.001, 'Total USD exact');
-          eq(t.fc, 22400 + 5000, 'Total FC exact');
+          eq(t.fc, 19200 + 5000, 'Total FC exact');
           // note article
           O.setItemNote(1, 'sans piment');
           eq(O.cart[1].note, 'sans piment', 'Note enregistrée');
@@ -294,7 +294,7 @@
         var paid = all.filter(function (x) { return x.status === 'paid'; });
         eq(paid.length, 4, '4 ventes payées enregistrées');
         // taux figé dans la vente
-        ok(paid.every(function (x) { return x.rate === 2800; }), 'Taux figé à 2800 dans chaque vente');
+        ok(paid.every(function (x) { return x.rate === 2400; }), 'Taux figé à 2400 dans chaque vente');
         // reçus
         var html = MUBASE.Receipts.buildReceiptHTML(paid[0]);
         ok(html.indexOf('MUBASE') !== -1, 'Reçu : nom restaurant');

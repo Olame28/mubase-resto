@@ -46,7 +46,10 @@
         '<strong>' + U.esc(U.fmtFC(t.fc)) + '</strong></p>';
       if (!sales.length) return html + '<div class="report-empty">Aucune vente aujourd\'hui.</div>';
       var rows = sales.map(function (s) {
-        return [U.esc(s.receiptNo), U.esc(s.tableName || '-'),
+        return [U.esc(s.receiptNo) +
+          ' <button class="mini" data-reprint="' + U.esc(s.receiptNo) + '">Imprimer</button>' +
+          ' <button class="mini" data-edit="' + U.esc(s.receiptNo) + '">Modif</button>',
+          U.esc(s.tableName || '-'),
           U.esc(U.fmtDateTime(s.date).substr(11)),
           U.esc(U.fmtUSD(s.totalUSD)), U.esc(U.fmtFC(s.totalFC)),
           U.esc((s.payment && s.payment.method) || '-')];
@@ -72,7 +75,10 @@
         return U.esc(k) + ' ×' + byMethod[k];
       }).join(' | ') + '</p>';
       var rows = sales.map(function (s) {
-        return [U.esc(s.receiptNo), U.esc(s.tableName || '-'),
+        return [U.esc(s.receiptNo) +
+          ' <button class="mini" data-reprint="' + U.esc(s.receiptNo) + '">Imprimer</button>' +
+          ' <button class="mini" data-edit="' + U.esc(s.receiptNo) + '">Modif</button>',
+          U.esc(s.tableName || '-'),
           U.esc(U.fmtUSD(s.totalUSD)), U.esc(U.fmtFC(s.totalFC))];
       });
       return html + (rows.length ? escTable(['Reçu', 'Table', 'USD', 'FC'], rows)

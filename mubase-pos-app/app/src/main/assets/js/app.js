@@ -31,6 +31,12 @@
         var s = C.getSettings();
         if (s.rate == null) s.rate = C.DEFAULT_RATE;
         if (s.rounding == null) s.rounding = C.DEFAULT_ROUNDING;
+        // Migration unique : taux 2400 et sans arrondi (modifiable ensuite)
+        if (!MUBASE.DB.getSettingSync('rate_v2')) {
+          s.rate = C.DEFAULT_RATE;
+          s.rounding = C.DEFAULT_ROUNDING;
+          MUBASE.DB.setSetting('rate_v2', '1');
+        }
         return MUBASE.DB.setSetting('settings', s);
       }).then(function () {
         // Migration unique : impose le PIN gerant 2828 une seule fois
@@ -191,7 +197,7 @@
       var lineUSD = Math.round(it.qty * it.unitUSD * 100) / 100;
       var lineFC = it.unitFC * it.qty;
       var sentCls = it.sent ? ' sent' : '';
-      var dis = it.sent ? ' disabled' : '';
+      var dis = '';
       html += '<div class="cart-item' + sentCls + '">' +
         '<div class="cart-item-info">' +
         '<div class="cart-item-name">' + U.esc(it.name) + '</div>' +
@@ -216,10 +222,6 @@
         if (this.disabled) return;
         var a = this.getAttribute('data-a');
         var idx = parseInt(this.getAttribute('data-i'), 10);
-        if (O.isLocked(idx)) {
-          U.toast('Article déjà envoyé : non modifiable.', 'error');
-          return;
-        }
         if (a === 'inc') O.changeQty(idx, 1);
         else if (a === 'dec') O.changeQty(idx, -1);
         else if (a === 'del') O.removeItem(idx);
@@ -536,8 +538,125 @@
     }
     promise.then(function (html) {
       content.innerHTML = html;
+      // Boutons "Imprimer" : réimpression d'une vente passée
+      var btns = content.querySelectorAll('button[data-reprint]');
+      for (var i = 0; i < btns.length; i++) {
+        btns[i].onclick = function () {
+          var rno = this.getAttribute('data-reprint');
+          MUBASE.DB.getSaleByReceipt(rno).then(function (sale) {
+            if (sale) MUBASE.Receipts.reprintSale(sale);
+            else U.toast('Vente introuvable.', 'error');
+          });
+        };
+      }
+      // Boutons "Modif" : correction d'une vente passée (PIN gérant)
+      var ebtns = content.querySelectorAll('button[data-edit]');
+      for (var j = 0; j < ebtns.length; j++) {
+        ebtns[j].onclick = function () {
+          var rno = this.getAttribute('data-edit');
+          MUBASE.DB.getSaleByReceipt(rno).then(function (sale) {
+            if (sale) App.openSaleEditor(sale);
+            else U.toast('Vente introuvable.', 'error');
+          });
+        };
+      }
     }).catch(function (err) {
       content.innerHTML = '<div class="report-empty">Erreur : ' + U.esc(err.message || err) + '</div>';
+    });
+  };
+
+  /* ================= Édition d'une vente passée ================= */
+
+  var editDraft = null;
+
+  function editTotals() {
+    var lines = editDraft.map(function (it) {
+      return { qty: it.qty, unitUSD: it.unitUSD, unitFC: it.unitFC };
+    });
+    return C.totals(lines);
+  }
+
+  function renderEditUI() {
+    var box = document.getElementById('saleEditItems');
+    var sale = state.editingSale;
+    document.getElementById('saleEditTitle').textContent =
+      'Modifier ' + sale.receiptNo + ' — ' + U.fmtDateTime(sale.date);
+    var html = '';
+    editDraft.forEach(function (it, idx) {
+      html += '<div class="cart-item">' +
+        '<div class="cart-item-info">' +
+        '<div class="cart-item-name">' + U.esc(it.name) + '</div>' +
+        (it.note ? '<div class="cart-item-note">' + U.esc(it.note) + '</div>' : '') +
+        '<div class="cart-item-price">' + U.esc(U.fmtUSD(it.unitUSD)) + ' / ' +
+        U.esc(U.fmtFC(it.unitFC)) + '</div></div>' +
+        '<div class="qty-controls">' +
+        '<button class="qty-btn" data-e="dec" data-i="' + idx + '">−</button>' +
+        '<span class="qty-val">' + it.qty + '</span>' +
+        '<button class="qty-btn" data-e="inc" data-i="' + idx + '">+</button>' +
+        '</div>' +
+        '<button class="item-del" data-e="del" data-i="' + idx + '">✕</button>' +
+        '</div>';
+    });
+    box.innerHTML = html || '<div class="cart-empty">Aucun article.</div>';
+    var t = editTotals();
+    document.getElementById('saleEditTotals').innerHTML =
+      '<div class="total-line"><span>Total USD</span><strong>' + U.esc(U.fmtUSD(t.usd)) + '</strong></div>' +
+      '<div class="total-line"><span>Total FC</span><strong>' + U.esc(U.fmtFC(t.fc)) + '</strong></div>' +
+      '<div class="total-line" style="margin-top:8px"><span>Total USD (corriger)</span>' +
+      '<input id="editTotalUSD" type="number" step="0.01" value="' + t.usd + '" style="width:110px"></div>' +
+      '<div class="total-line"><span>Total FC (corriger)</span>' +
+      '<input id="editTotalFC" type="number" step="1" value="' + t.fc + '" style="width:130px"></div>';
+    var btns = box.querySelectorAll('button');
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].onclick = function () {
+        var a = this.getAttribute('data-e');
+        var idx = parseInt(this.getAttribute('data-i'), 10);
+        if (a === 'inc') editDraft[idx].qty += 1;
+        else if (a === 'dec') editDraft[idx].qty -= 1;
+        else if (a === 'del') editDraft.splice(idx, 1);
+        if (editDraft[idx] && editDraft[idx].qty <= 0) editDraft.splice(idx, 1);
+        renderEditUI();
+      };
+    }
+  }
+
+  App.openSaleEditor = function (sale) {
+    App.requirePin('Modification de vente — PIN gérant', function () {
+      state.editingSale = sale;
+      editDraft = (sale.items || []).map(function (it) {
+        return { productId: it.productId, name: it.name, qty: it.qty,
+          note: it.note || '', unitUSD: it.unitUSD, unitFC: it.unitFC, free: !!it.free };
+      });
+      renderEditUI();
+      document.getElementById('saleEditModal').classList.remove('hidden');
+    });
+  };
+
+  App.saveSaleEditor = function () {
+    var sale = state.editingSale;
+    if (!sale || !editDraft.length) {
+      U.toast('La vente doit contenir au moins un article.', 'error');
+      return;
+    }
+    var t = editTotals();
+    // Totaux corrigés manuellement prioritaires sur le calcul des articles
+    var inUSD = parseFloat(document.getElementById('editTotalUSD').value);
+    var inFC = parseFloat(document.getElementById('editTotalFC').value);
+    if (isFinite(inUSD) && inUSD >= 0) t.usd = Math.round(inUSD * 100) / 100;
+    if (isFinite(inFC) && inFC >= 0) t.fc = Math.round(inFC);
+    sale.items = editDraft.map(function (it) {
+      return { productId: it.productId, name: it.name, qty: it.qty,
+        note: it.note || '', unitUSD: it.unitUSD, unitFC: it.unitFC, free: !!it.free };
+    });
+    sale.totalUSD = t.usd;
+    sale.totalFC = t.fc;
+    MUBASE.DB.updateSale(sale).then(function () {
+      MUBASE.Security.log('MODIF_VENTE', sale.receiptNo + ' | nouveaux totaux ' +
+        U.fmtUSD(t.usd) + ' / ' + U.fmtFC(t.fc));
+      document.getElementById('saleEditModal').classList.add('hidden');
+      U.toast('Vente ' + sale.receiptNo + ' modifiée.', 'ok');
+      App.renderReport();
+      if (window.MUBASE && MUBASE.Sync) MUBASE.Sync.now();
     });
   };
 
@@ -933,6 +1052,10 @@
     document.getElementById('btnCheckout').onclick = App.openPayment;
     document.getElementById('btnTransfer').onclick = App.openTransfer;
     document.getElementById('btnKitchen').onclick = App.sendToKitchen;
+    document.getElementById('btnSaleEditCancel').onclick = function () {
+      document.getElementById('saleEditModal').classList.add('hidden');
+    };
+    document.getElementById('btnSaleEditSave').onclick = App.saveSaleEditor;
     // Impression du menu / tarif complet
     document.getElementById('btnMenu').onclick = function () {
       MUBASE.Receipts.printMenu(state.products);

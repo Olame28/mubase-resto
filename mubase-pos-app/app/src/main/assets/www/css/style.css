@@ -262,6 +262,7 @@ html, body {
 #tablesView.active { flex-direction: column; }
 #tablesView .tables-grid { flex: 1; min-height: 0; }
 .btn-sm { padding: 4px 10px; font-size: 12px; }
+.mini { padding: 3px 8px; font-size: 11px; background: var(--bg3, #21262d); color: var(--text, #eee); border: 1px solid var(--border); border-radius: 5px; cursor: pointer; white-space: nowrap; }
 
 /* ---------- Modales ---------- */
 .modal {
@@ -271,6 +272,7 @@ html, body {
   z-index: 100;
   padding: 16px;
 }
+#pinModal { z-index: 400; }
 .modal-box {
   background: var(--bg2);
   border: 1px solid var(--border);

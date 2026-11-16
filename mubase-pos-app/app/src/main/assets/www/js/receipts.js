@@ -468,6 +468,9 @@
     function finish(ok) {
       if (!done) { done = true; if (cb) cb(ok); }
     }
+    // Si le pont a deja echoue dans cette session, on saute la tentative
+    // XHR (timeout 2,5 s) et on passe directement a l'aperçu : fini le retard.
+    if (R._bridgeDown) { finish(false); return; }
     // Pont natif (APK Android) : impression thermique directe, synchrone
     try {
       if (window.MUBASEPrint && typeof window.MUBASEPrint.printTicket === 'function') {
@@ -486,13 +489,16 @@
       xhr.setRequestHeader('Content-Type', 'text/plain; charset=utf-8');
       xhr.onreadystatechange = function () {
         if (xhr.readyState === 4) {
-          finish(xhr.status >= 200 && xhr.status < 300);
+          var ok = xhr.status >= 200 && xhr.status < 300;
+          if (!ok) R._bridgeDown = true;
+          finish(ok);
         }
       };
-      xhr.ontimeout = function () { finish(false); };
-      xhr.onerror = function () { finish(false); };
+      xhr.ontimeout = function () { R._bridgeDown = true; finish(false); };
+      xhr.onerror = function () { R._bridgeDown = true; finish(false); };
       xhr.send(text);
     } catch (e) {
+      R._bridgeDown = true;
       finish(false);
     }
     // Filet de sécurité si aucun événement ne revient

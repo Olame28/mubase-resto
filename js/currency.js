@@ -6,9 +6,9 @@
 
   var C = {};
 
-  // Taux par défaut : 1 USD = 2800 FC
-  C.DEFAULT_RATE = 2800;
-  C.DEFAULT_ROUNDING = 100;
+  // Taux par défaut : 1 USD = 2400 FC
+  C.DEFAULT_RATE = 2400;
+  C.DEFAULT_ROUNDING = 1;
 
   C.getSettings = function () {
     return MUBASE.DB.getSettingSync('settings') || {};
