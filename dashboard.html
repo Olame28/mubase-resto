@@ -66,7 +66,7 @@ h3.sec span{color:var(--mut);font-weight:400;font-size:12px}
 #tech{border:1px dashed var(--acc);display:none}
 #tech h3{color:var(--acc);margin-top:0}
 .log{max-height:220px;overflow-y:auto;font-size:12px;color:var(--mut)}
-.maint{position:fixed;bottom:8px;right:12px;font-size:10px;color:#3a4552;text-decoration:none;z-index:60}
+.maint{position:fixed;bottom:6px;right:10px;font-size:8px;color:#2a3440;text-decoration:none;z-index:60;opacity:.35;letter-spacing:1px}
 .maint:hover{color:var(--mut)}
 @media(max-width:640px){
   .htitle h1{font-size:16px}
@@ -132,7 +132,7 @@ function table(h,rows){var t='<div class="tblwrap"><table><thead><tr>';h.forEach
   return t+'</tbody></table></div>';}
 function todayStr(){var d=new Date();return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
 function paid(s){return (s.status||'paid')!=='cancelled';}
-function dayOf(s){return (s.date||'').slice(0,10);}
+function dayOf(s){var d=new Date(s.date||'');if(isNaN(d))return(s.date||'').slice(0,10);var p=function(x){return('0'+x).slice(-2);};return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());}
 function cartTotal(c){var fc=0,usd=0;(c.items||[]).forEach(function(it){fc+=(it.qty||0)*(+it.unitFC||0);usd+=(it.qty||0)*(+it.unitUSD||0);});return{fc:fc,usd:usd};}
 function cartLabel(c){return c.customName||({'t1':'Table 1'})[c.tableId]||c.tableId||'-';}
 function cartName(c){var m={'t1':'Table 1','t2':'Table 2','t3':'Table 3','t4':'Table 4','t5':'Table 5','t6':'Table 6','t7':'Table 7','t8':'Table 8','t9':'Table 9','t10':'Table 10','t11':'Table 11','t12':'Table 12','t13':'Table 13','t14':'Table 14','t15':'Table 15'};return c.customName||m[c.tableId]||c.tableId||'-';}
@@ -245,31 +245,39 @@ function render(){
       (rows.length?table(['Reçu','Date','Table','Montant','Motif'],rows):'<div class="empty">Aucune anomalie sur cette période.</div>');
   }
   else if(cur==='shifts'){
-    var rows=(DATA.shifts||[]).sort(function(x,y){return String(y.date).localeCompare(String(a.date));}).map(function(s){
+    var rows=(DATA.shifts||[]).sort(function(x,y){return String(y.date).localeCompare(String(x.date));}).map(function(s){
       return ['<b>'+esc(fmtD(s.date))+'</b>','<span class="num">'+(s.salesCount||0)+'</span>','<span class="num">'+fmt(s.totalFC||0)+' FC</span>','<span class="num">'+fmt((+s.totalUSD||0).toFixed(2))+' $</span>','<span class="tag">'+esc(s.closedBy||'-')+'</span>'];});
     h='<h3 class="sec">Clôtures de caisse</h3>'+(rows.length?table(['Date','Ventes','Total FC','Total $','Par'],rows):'<div class="empty">Aucune clôture enregistrée.</div>');
   }
   out.innerHTML=h;
 }
 
+function dayStr(off){var d=new Date();d.setDate(d.getDate()+off);return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
+function preset(a,b){document.getElementById('d1').value=a;document.getElementById('d2').value=b;render();}
 function buildFilters(){
   var f=document.getElementById('filters');
-  var needDate=(cur==='date'||cur==='period');
-  var h='';
-  if(needDate){
-    h+='<span class="lbl">Du</span><input type="date" id="d1" value="'+todayStr()+'">'+
-       '<span class="lbl">au</span><input type="date" id="d2" value="'+todayStr()+'">'+
-       '<button class="btn sm" onclick="render()">Afficher</button>';
-    f.innerHTML=h;
+  var pdf='<button class="btn sm ghost" onclick="exportPDF()">Télécharger PDF</button>';
+  if(cur==='date'){
+    f.innerHTML='<span class="lbl">Date</span><input type="date" id="d1" value="'+todayStr()+'">'+
+      '<button class="btn sm" onclick="render()">Afficher</button>'+pdf;
     document.getElementById('d1').onchange=render;
-    document.getElementById('d2').onchange=render;
-  }else{
-    f.innerHTML='<span class="lbl">'+esc(currentRange().label)+'</span>'+
-      '<button class="btn sm ghost" onclick="exportPDF()">Télécharger PDF</button>';
     return;
   }
-  h+='<button class="btn sm ghost" onclick="exportPDF()">Télécharger PDF</button>';
-  f.innerHTML=h;
+  if(cur==='period'){
+    var t=todayStr();
+    f.innerHTML='<span class="lbl">Du</span><input type="date" id="d1" value="'+t+'">'+
+      '<span class="lbl">au</span><input type="date" id="d2" value="'+t+'">'+
+      '<button class="btn sm" onclick="render()">Afficher</button>'+pdf+
+      '<span class="lbl" style="margin-left:8px">Rapide :</span>'+
+      '<button class="tab" data-a="'+t+'" data-b="'+t+'" onclick="preset(this.dataset.a,this.dataset.b)">Aujourd&#39;hui</button>'+
+      '<button class="tab" data-a="'+dayStr(-1)+'" data-b="'+dayStr(-1)+'" onclick="preset(this.dataset.a,this.dataset.b)">Hier</button>'+
+      '<button class="tab" data-a="'+dayStr(-7)+'" data-b="'+t+'" onclick="preset(this.dataset.a,this.dataset.b)">7 jours</button>'+
+      '<button class="tab" data-a="'+t.slice(0,8)+'01" data-b="'+t+'" onclick="preset(this.dataset.a,this.dataset.b)">Mois</button>';
+    document.getElementById('d1').onchange=render;
+    document.getElementById('d2').onchange=render;
+    return;
+  }
+  f.innerHTML='<span class="lbl">'+esc(currentRange().label)+'</span>'+pdf;
 }
 
 /* ---------- PDF ---------- */
