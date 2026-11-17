@@ -257,16 +257,20 @@ function preset(a,b){document.getElementById('d1').value=a;document.getElementBy
 function buildFilters(){
   var f=document.getElementById('filters');
   var pdf='<button class="btn sm ghost" onclick="exportPDF()">Télécharger PDF</button>';
+  // Conserver les dates deja saisies : ne pas les ecraser a chaque rendu
+  var old1=document.getElementById('d1'),old2=document.getElementById('d2');
+  var v1=old1?old1.value:'',v2=old2?old2.value:'';
+  var t0=v1||todayStr();
   if(cur==='date'){
-    f.innerHTML='<span class="lbl">Date</span><input type="date" id="d1" value="'+todayStr()+'">'+
+    f.innerHTML='<span class="lbl">Date</span><input type="date" id="d1" value="'+t0+'">'+
       '<button class="btn sm" onclick="render()">Afficher</button>'+pdf;
     document.getElementById('d1').onchange=render;
     return;
   }
   if(cur==='period'){
-    var t=todayStr();
+    var t=v1||todayStr();
     f.innerHTML='<span class="lbl">Du</span><input type="date" id="d1" value="'+t+'">'+
-      '<span class="lbl">au</span><input type="date" id="d2" value="'+t+'">'+
+      '<span class="lbl">au</span><input type="date" id="d2" value="'+(v2||t)+'">'+
       '<button class="btn sm" onclick="render()">Afficher</button>'+pdf+
       '<span class="lbl" style="margin-left:8px">Rapide :</span>'+
       '<button class="tab" data-a="'+t+'" data-b="'+t+'" onclick="preset(this.dataset.a,this.dataset.b)">Aujourd&#39;hui</button>'+
