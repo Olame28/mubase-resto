@@ -193,20 +193,18 @@
       return MUBASE.DB._req(idx.get(receiptNo));
     });
   };
+  // Filtre par date LOCALE : les ventes sont stockees en UTC (ISO) mais les
+  // rapports travaillent en heure de Goma (UTC+2) -> on convertit chaque
+  // vente en date locale avant comparaison.
   D.getSalesByDate = function (dateStr) {
-    return getStore('sales', 'readonly', function (s) {
-      var idx = s.index('date');
-      var range = IDBKeyRange.bound(dateStr, dateStr + '￿');
-      if (idx.getAll) return reqToPromise(idx.getAll(range));
-      return new Promise(function (res, rej) {
-        var r = idx.openCursor(range), arr = [];
-        r.onsuccess = function () {
-          var cur = r.result;
-          if (cur) { arr.push(cur.value); cur.continue(); }
-          else res(arr);
-        };
-        r.onerror = function () { rej(r.error); };
-      });
+    function localDay(iso) {
+      var d = new Date(iso);
+      if (isNaN(d)) return '';
+      var p = function (x) { return (x < 10 ? '0' : '') + x; };
+      return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+    }
+    return D.getAll('sales').then(function (sales) {
+      return (sales || []).filter(function (s) { return localDay(s.date) === dateStr; });
     });
   };
   D.updateSale = function (sale) { return D.put('sales', sale); };
