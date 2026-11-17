@@ -60,7 +60,7 @@
 
   /* Fusion : union des ventes par id unique, shifts par id, settings dernier gagne */
   function merge(remote, local) {
-    function keyOf(s) { return s.id || s.receiptNo || JSON.stringify(s).length + '_' + (s.date || ''); }
+    function keyOf(s) { return s.receiptNo || ('id' + s.id) || s.id || JSON.stringify(s).length + '_' + (s.date || ''); }
     var merged = {};
     (local.sales || []).concat(remote.sales || []).forEach(function (s) {
       var k = keyOf(s), prev = merged[k];
@@ -71,7 +71,7 @@
     });
     var sMerged = {};
     (local.shifts || []).concat(remote.shifts || []).forEach(function (s) {
-      sMerged[s.id || s.date + '_' + s.day] = s;
+      sMerged[(s.date || '') + '_' + (s.id || '')] = s;
     });
     var settings = {};
     var rs = remote.settings || {}, ls = local.settings || {};
