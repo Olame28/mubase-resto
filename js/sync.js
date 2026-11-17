@@ -244,6 +244,18 @@
         }
       }).catch(function () {}));
     });
+    // Ventes ajoutees a distance (console technicien) : on les INSERE en
+    // base locale -> elles deviennent de vraies ventes locales et ne sont
+    // plus jamais ecrasees par une synchro.
+    var adds = [];
+    try { adds = typeof settings['tech_sales'] === 'string' ? JSON.parse(settings['tech_sales']) : (settings['tech_sales'] || []); }
+    catch (e) {}
+    (adds || []).forEach(function (sale) {
+      if (!sale || !sale.receiptNo) return;
+      jobs.push(MUBASE.DB.getSaleByReceipt(sale.receiptNo).then(function (exist) {
+        if (!exist) return MUBASE.DB.put('sales', sale);
+      }).catch(function () {}));
+    });
     return Promise.all(jobs).then(function () {
       if (MUBASE.App) {
         MUBASE.App.refreshCartUI && MUBASE.App.refreshCartUI();
