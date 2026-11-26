@@ -46,6 +46,11 @@
       (r[3] || []).forEach(function (s) {
         if (s && s.key) settings[s.key] = s.value !== undefined ? s.value : s;
       });
+      // Jamais de secret vers le cloud : hash PIN, sel et PIN de reset
+      // restent locaux (le cloud est lisible avec la cle publique).
+      ['manager_pin_hash', 'pin_salt', 'reset_pin_hash'].forEach(function (k) {
+        delete settings[k];
+      });
       return {
         sales: r[0] || [],
         shifts: r[1] || [],
@@ -89,6 +94,22 @@
       return JSON.stringify(out);
     }
     settings['cart_tombstones'] = tombMerge(ls['cart_tombstones'], rs['cart_tombstones']);
+    // Produits : union par id. Le produit avec l'updatedAt le plus recent
+    // gagne ; a egalite (ou sans date), le cloud gagne — il porte les
+    // corrections faites depuis la console ou un autre appareil, et les
+    // editions locales portent toujours un updatedAt frais.
+    var pMerged = {};
+    (local.products || []).forEach(function (p) {
+      if (p && p.id != null) pMerged[p.id] = p;
+    });
+    (remote.products || []).forEach(function (p) {
+      if (!p || p.id == null) return;
+      var prev = pMerged[p.id];
+      if (!prev) { pMerged[p.id] = p; return; }
+      var pt = p.updatedAt ? String(p.updatedAt) : '';
+      var ot = prev.updatedAt ? String(prev.updatedAt) : '';
+      if (pt >= ot) pMerged[p.id] = p;
+    });
     var tomb = {};
     try { tomb = JSON.parse(settings['cart_tombstones'] || '{}'); } catch (e) {}
     // Paniers : union par tableId, la version la plus recente gagne,
@@ -106,6 +127,7 @@
     return {
       sales: Object.keys(merged).map(function (k) { return merged[k]; }),
       shifts: Object.keys(sMerged).map(function (k) { return sMerged[k]; }),
+      products: Object.keys(pMerged).map(function (k) { return pMerged[k]; }),
       settings: settings,
       carts: cartsOut
     };
@@ -173,6 +195,9 @@
     });
     (m.carts || []).forEach(function (c) {
       jobs.push(MUBASE.DB.put('carts', c).catch(function () {}));
+    });
+    (m.products || []).forEach(function (p) {
+      jobs.push(MUBASE.DB.put('products', p).catch(function () {}));
     });
     // Settings : on ne réécrit que les clés connues pour éviter les doublons
     return Promise.all(jobs).then(function () {

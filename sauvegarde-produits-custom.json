@@ -1,0 +1,132 @@
+{
+  "app": "MUBASE-POS",
+  "type": "sauvegarde-produits-custom",
+  "exportedAt": "2026-11-26",
+  "note": "11 produits custom presents sur le Citaq + 3 ajouts demandes (croissants, pizza burger). A reimporter si la base locale est effacee.",
+  "count": 14,
+  "products": [
+    {
+      "id": "custom-id-mww5g66z-86ik1f",
+      "free": false,
+      "name": "Cocktail alcoolisé",
+      "note": "",
+      "active": true,
+      "category": "Shawarmas",
+      "priceUSD": 5
+    },
+    {
+      "id": "custom-id-mwwanwsn-19351q",
+      "free": false,
+      "name": "Cocktail de fruits 4L",
+      "note": "",
+      "active": true,
+      "category": "Jus naturels",
+      "priceUSD": 25
+    },
+    {
+      "id": "custom-id-mwwdpepx-5is9gg",
+      "free": false,
+      "name": "Pain burger",
+      "note": "",
+      "active": true,
+      "priceFC": 500,
+      "category": "Shawarmas"
+    },
+    {
+      "id": "custom-id-mwwdpyue-3nejvn",
+      "free": false,
+      "name": "Pain sandwich",
+      "note": "",
+      "active": true,
+      "priceFC": 250,
+      "category": "Shawarmas"
+    },
+    {
+      "id": "custom-id-mwwdqd2j-ycrs9",
+      "free": false,
+      "name": "Pain carré",
+      "note": "",
+      "active": true,
+      "priceFC": 3500,
+      "category": "Shawarmas"
+    },
+    {
+      "id": "custom-id-mwwdqtvi-auauqb",
+      "free": false,
+      "name": "Pain baguette",
+      "note": "",
+      "active": true,
+      "priceFC": 1000,
+      "category": "Shawarmas"
+    },
+    {
+      "id": "custom-id-mwxgiil5-avy97r",
+      "free": false,
+      "name": "Croissant chocolat",
+      "note": "",
+      "active": true,
+      "category": "Shawarmas",
+      "priceUSD": 2
+    },
+    {
+      "id": "custom-id-mwxhutyo-fyrhwx",
+      "free": false,
+      "name": "Frites simple",
+      "note": "",
+      "active": true,
+      "category": "Shawarmas",
+      "priceUSD": 2
+    },
+    {
+      "id": "custom-id-mwxih7o9-73cgyl",
+      "free": false,
+      "name": "Savana",
+      "note": "",
+      "active": true,
+      "priceFC": 5000,
+      "category": "Shawarmas"
+    },
+    {
+      "id": "custom-id-mwxpde99-75pt4a",
+      "free": false,
+      "name": "Pizza saussisso",
+      "note": "",
+      "active": true,
+      "category": "Shawarmas",
+      "priceUSD": 10
+    },
+    {
+      "id": "custom-id-mwxpeomu-9b5e7z",
+      "free": false,
+      "name": "Seregetti",
+      "note": "",
+      "active": true,
+      "priceFC": 4000,
+      "category": "Shawarmas"
+    },
+    {
+      "id": "custom-croissant-simple",
+      "name": "Croissant simple",
+      "category": "Shawarmas",
+      "active": true,
+      "priceUSD": 1.5,
+      "note": "ajout demande 2026-11-26"
+    },
+    {
+      "id": "custom-croissant-fromage",
+      "name": "Croissant fromage",
+      "category": "Shawarmas",
+      "active": true,
+      "priceUSD": 2,
+      "note": "ajout demande 2026-11-26"
+    },
+    {
+      "id": "custom-pizza-burger",
+      "name": "Pizza burger",
+      "category": "Pizzas",
+      "active": true,
+      "priceUSD": 6,
+      "note": "ajout demande 2026-11-26"
+    }
+  ]
+}

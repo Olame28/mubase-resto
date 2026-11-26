@@ -23,7 +23,6 @@
   /* ================= Initialisation ================= */
 
   App.init = function () {
-    if (window.MUBASE && MUBASE.Sync) { MUBASE.Sync.loadConfig(); MUBASE.Sync.init(); }
     MUBASE.DB.init()
       .then(function () { return MUBASE.DB.loadSettingsCache(); })
       .then(function () {
@@ -67,6 +66,9 @@
         App.bindEvents();
         App.addCancelButton();
         App.registerSW();
+        // Synchro demarree APRES l'init complete : le premier export contient
+        // le catalogue complet (seedIfEmpty fait) et les settings charges.
+        if (window.MUBASE && MUBASE.Sync) { MUBASE.Sync.loadConfig(); MUBASE.Sync.init(); }
     App.showLock();
         App.watchOnline();
         if (MUBASE.Security.isDefaultPin()) {

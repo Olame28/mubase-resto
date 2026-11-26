@@ -32,6 +32,8 @@
 
   // Sauvegarde produit (admin, après PIN)
   S.saveProduct = function (p) {
+    // Horodatage : la synchro s'en sert pour choisir la version la plus recente
+    p.updatedAt = new Date().toISOString();
     return MUBASE.DB.saveProduct(p).then(function () {
       MUBASE.Security.log('PRODUIT', 'Produit enregistré : ' + p.name);
     });
